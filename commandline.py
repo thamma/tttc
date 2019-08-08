@@ -45,7 +45,7 @@ def handle():
         return True
     else:
         api_id, api_hash = tttcutils.assert_environment()
-        client = TelegramClient("tttc", api_id, api_hash)
+        client = TelegramClient(tttcutils.sessionfile(), api_id, api_hash)
         debug("Connecting...", file=sys.stderr)
         client.connect()
         debug("Connected.", file=sys.stderr)

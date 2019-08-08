@@ -17,3 +17,8 @@ def assert_environment():
         print("Please consult https://core.telegram.org/api/obtaining_api_id on how to get your own API id and hash.")
         exit(1)
     return os.environ["TTTC_API_ID"], os.environ["TTTC_API_HASH"]
+
+def sessionfile():
+    if not os.path.exists(os.path.expanduser("~/.config/tttc")):
+        os.makedirs(os.path.expanduser("~/.config/tttc/"))
+    return os.path.expanduser("~/.config/tttc/tttc")

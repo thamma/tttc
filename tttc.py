@@ -22,7 +22,7 @@ class Display:
     def __init__(self, loop):
         self.loop = loop
         api_id, api_hash = tttcutils.assert_environment()
-        self.client = TelegramClient("tttc", api_id, api_hash, loop=self.loop)
+        self.client = TelegramClient(tttcutils.sessionfile(), api_id, api_hash, loop=self.loop)
 
 
     def __enter__(self):
