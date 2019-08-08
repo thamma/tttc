@@ -60,12 +60,51 @@ class Drawtool():
         return newlines
         #return textwrap.wrap(s, width = width)
 
+    def move_cursor_home(self):
+        y, x = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
+        lines = self._get_input_lines(self.main_view.inputs, width = self.W - 4)[-self.input_lines:]
+        self.main_view.cursor -= x
+        #len(lines[y])
+    
+    def move_cursor_end(self):
+        try:
+            y, x = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
+            lines = self._get_input_lines(self.main_view.inputs, width = self.W - 4)[-self.input_lines:]
+            self.main_view.cursor -= x - len(lines[y])
+        except:
+            show_stacktrace()
+        #len(lines[y])
+
+    def move_cursor_up(self):
+        y, x = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
+        lines = self._get_input_lines(self.main_view.inputs, width = self.W - 4)[-self.input_lines:]
+        debug(lines)
+        debug(f"x:{x} y:{y}")
+        if y > 0:
+            self.main_view.cursor -= x
+            self.main_view.cursor -= 1
+
+    def move_cursor_down(self):
+        pass
+
     def _get_cursor_position(self, s, width = 50):
         lines = self._get_input_lines(s, width = width)[-self.input_lines:]
+        alllines = self._get_input_lines(s, width = width)
         if not lines:
             return (0, 0)
-        x = len(lines[-1])
-        y = len(lines) - 1
+        curs = self.main_view.cursor
+        y = 0
+        x = 0
+        for line in alllines:
+            if curs > len(line):
+                curs -= len(line)
+                y += 1
+            else:
+                x = curs
+                break
+            curs -= 1
+        if y >= self.input_lines:
+            y = self.input_lines - 1
         return y, x
 
     async def redraw(self):

@@ -28,7 +28,7 @@ class MainView():
         self.text_emojis = True
 
         self.inputs = ""
-        self.inputs_cursor = 0
+        self.cursor = 0
 
         self.popup = None
 
@@ -442,33 +442,47 @@ class MainView():
                 self.mode = "normal"
             elif key == "LEFT":
                 self.insert_move_left()
+            elif key == "UP":
+                self.drawtool.move_cursor_up()
             elif key == "RIGHT":
                 self.insert_move_right()
+            elif key == "HOME":
+                self.drawtool.move_cursor_home()
+                #self.cursor = 0
+            elif key == "END":
+                self.drawtool.move_cursor_end()
+                #self.cursor = len(self.inputs)
+            elif key == "DEL":
+                try:
+                    if len(self.inputs) > self.cursor:
+                        inp = list(self.inputs)
+                        inp.pop(self.cursor)
+                        self.inputs = "".join(inp)
+                except:
+                    debug(f"{self.cursor}, {self.inputs}")
+                    show_stacktrace()
             elif key == "BACKSPACE":
-                self.inputs = self.inputs[0:-1]
-            elif key == "RETURN":
-                self.inputs += "\n"
+                try:
+                    if len(self.inputs) > 0:
+                        inp = list(self.inputs)
+                        inp.pop(self.cursor - 1)
+                        self.inputs = "".join(inp)
+                        self.insert_move_left()
+                except:
+                    debug(f"{self.cursor}, {self.inputs}")
+                    show_stacktrace()
             else:
-                self.inputs += key
+                if key == "RETURN":
+                    key = "\n"
+                inp = list(self.inputs)
+                inp.insert(self.cursor, key)
+                self.inputs = "".join(inp)
+                self.cursor += 1
         self.command_box = ""
         await self.drawtool.redraw()
 
     def insert_move_left(self):
-        self.inputs_cursor = max(0, self.cursor - 1)
+        self.cursor = max(0, self.cursor - 1)
 
     def insert_move_right(self):
-        self.inputs_cursor = min(len(self.inputs), self.cursor + 1)
-
-    async def handle_key_old(self, key):
-        if key == "RETURN":
-            with await self.inputevent:
-                self.inputevent.notify()
-        elif key == "":
-            chat =  self.dialogs[self.selected_chat]["dialog"]
-            last_message = self.dialogs[self.selected_chat]["messages"][0]
-            await self.client.send_read_acknowledge(chat, max_id=last_message.id)
-            self.dialogs[self.selected_chat]["unread_count"] = 0
-        else:
-            self.inputs += key
-        self.drawtool.redraw()
-
+        self.cursor = min(len(self.inputs), self.cursor + 1)
