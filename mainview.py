@@ -30,6 +30,8 @@ class MainView():
         self.inputs = ""
         self.inputs_cursor = 0
 
+        self.popup = None
+
         self.drawtool = drawtool.Drawtool(self)
         self.fin = False
         from config import colors as colorconfig
@@ -298,6 +300,16 @@ class MainView():
             else:
                 subprocess.Popen(["xdg-open", f"{path}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
+    def popup_message(self, question):
+        self.mode = "popup"
+        async def action_handler(self, key):
+            self.mode = "normal"
+        self.popup = (action_handler, question)
+
+    def spawn_popup(self, action_handler, question):
+        self.mode = "popup"
+        self.popup = (action_handler, question)
+
     async def handle_key(self, key):
         if not self.ready:
             return
@@ -371,11 +383,19 @@ class MainView():
                         return
                     if n >= len(self.dialogs[self.selected_chat]["messages"]):
                         #TODO: alert user
+                        self.popup_message("No message by that id.")
+                        await self.drawtool.redraw()
                         return
-                    to_delete = self.dialogs[self.selected_chat]["messages"][n]
-                    await to_delete.delete()
-                    self.dialogs[self.selected_chat]["messages"].pop(n)
-                    self.command_box = ""
+                    async def action_handler(self, key):
+                        if key in ["y","Y"]:
+                            to_delete = self.dialogs[self.selected_chat]["messages"][n]
+                            await to_delete.delete()
+                            self.dialogs[self.selected_chat]["messages"].pop(n)
+                            self.command_box = ""
+                        self.mode = "normal"
+                    question = f"Are you really sure you want to delete message {n}? [y/N]"
+                    self.spawn_popup(action_handler, question)
+
                     await self.drawtool.redraw()
             elif key == "r":
                 if self.command_box:
@@ -414,6 +434,9 @@ class MainView():
                 self.search_box = ""
             elif key == " ":
                 self.drawtool.show_indices ^= True
+        elif self.mode == "popup":
+            action, _ = self.popup
+            await action(self, key)
         elif self.mode == "insert":
             if key == "ESCAPE":
                 self.mode = "normal"
