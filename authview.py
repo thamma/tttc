@@ -62,7 +62,20 @@ class AuthView():
             self.stdscr.addstr("auth with code now.")
             self.stdscr.refresh()
             self.code = await self.textinput()
-            await self.client.sign_in(self.phone, self.code)
+            try:
+                await self.client.sign_in(self.phone, self.code)
+            except telethon.errors.SessionPasswordNeededError:
+                self.stdscr.addstr("Password required to log in")
+                self.stdscr.refresh()
+                self.passwd = await self.textinput()
+                try:
+                    await self.client.sign_in(password=self.passwd)
+                    # TODO: debug me
+                except:
+                    show_stacktrace()
+            except telethon.errors.rpcerrorlist.PhoneCodeInvalidError:
+                pass
+
         self.stdscr.addstr(f"auth successful. ")
         self.stdscr.refresh()
 
