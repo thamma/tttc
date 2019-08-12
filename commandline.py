@@ -26,7 +26,6 @@ def handle():
     messaging.add_argument("--me", action="store_true", help="Send the message to yourself")
     messaging.add_argument("--target", "-t", metavar="chatid", type=int, help="Send the message to the given chat")
     messaging.add_argument("--message", "--msg", "-m", help="Provide a message.")
-    messaging.add_argument("--stdin", "-i", action="store_true", help="Read a message from stdin.")
     parsed = parser.parse_args()
     global debug
     if parsed.verbose:
@@ -58,6 +57,8 @@ def handle():
             debug("Fetching chats...", file=sys.stderr)
             chats = client.get_dialogs()
 
+        stdinput = "".join([line for line in sys.stdin])
+
         filtered = chats if parsed.list else filter_chats((parsed.startswith, parsed.contains, parsed.matches))
         unique = None
         if filtered:
@@ -67,12 +68,12 @@ def handle():
                 for result in reversed(filtered):
                     print(str(result.id).rjust(16) + " "*4 + result.name)
             else:
-                if not (parsed.message or parsed.stdin):
+                if not (parsed.message or stdinput):
                     for result in reversed(filtered):
                         print(str(result.id).rjust(16) + " "*4 + result.name)                 
                     exit()
                 unique = filtered[0].id
-        if not (parsed.message or parsed.stdin):
+        if not (parsed.message or stdinput):
             exit() # we are done here
         
         recipient = unique or parsed.target
@@ -92,11 +93,11 @@ def handle():
         #    print("Illegal entity id. Aborting.", file=sys.stderr)
         #    exit(1)
 
-        if parsed.message or parsed.stdin:
-            send_message(client, recipient, message=parsed.message)
+        #if parsed.message or parsed.stdin:
+        send_message(client, recipient, message=parsed.message, stdinput=stdinput)
         return True
 
-def send_message(client, chat_id, message):
+def send_message(client, chat_id, message, stdinput):
     #print(f"call to {client} {chat_id} {message}")
     try:
         recipient = client.get_input_entity(chat_id)
@@ -104,13 +105,14 @@ def send_message(client, chat_id, message):
         print("Could not find the entity for this entity id. Aborting.", file=sys.stderr)
         exit(1)
     debug("Chat exists. Sending message.", file=sys.stderr)
-    if message is None:
-        debug("No message specified. Reading from stdin.", file=sys.stderr)
-        message = "".join([line for line in sys.stdin])
-    if message.strip() == "":
+    if message and stdinput:
+        out = f"{message}\n{stdinput}"
+    else:
+        out = message or stdinput
+    if not out.strip():
         print("The message must not be empty.", file=sys.stderr)
         exit()
-    client.send_message(chat_id, message)
+    client.send_message(chat_id, out)
 
 def filter_chats(filt):
     if filt == (None, None, None):
