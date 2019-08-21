@@ -27,6 +27,10 @@ class MainView():
         # self.client.add_event_handler(self.on_read, events.MessageRead)
         self.text_emojis = True
 
+        self.macros = {}
+        self.macro_recording = None
+        self.macro_sequence = []
+
         self.inputs = ""
         self.inputs_cursor = 0
 
@@ -52,6 +56,7 @@ class MainView():
         self.selected_message = None
 
         self.mode = "normal"
+        self.modestack = []
 
     async def quit(self):
         self.fin = True
@@ -301,21 +306,29 @@ class MainView():
                 subprocess.Popen(["xdg-open", f"{path}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     def popup_message(self, question):
-        self.mode = "popup"
+        self.modestack.append(self.mode)
+        self.mode = "popupmessage"
         async def action_handler(self, key):
-            self.mode = "normal"
+            pass
         self.popup = (action_handler, question)
 
     def spawn_popup(self, action_handler, question):
+        # on q press
+        self.modestack.append(self.mode)
         self.mode = "popup"
         self.popup = (action_handler, question)
 
-    async def handle_key(self, key):
+    async def handle_key(self, key, redraw = True):
+        if self.mode == "popupmessage":
+            self.mode = self.modestack.pop()
         if not self.ready:
             return
         if key == "RESIZE":
             await self.drawtool.resize()
             return
+        if self.macro_recording:
+            if key != "q":
+                self.macro_sequence.append(key)
         if self.mode == "search":
             if key == "ESCAPE" or key == "RETURN":
                 self.mode = "normal"
@@ -360,13 +373,33 @@ class MainView():
             elif key == "RETURN" or key == "y":
                 await self.send_message()
             elif key == "q":
-                await self.quit()
-            #elif key == "D":
-            #    for i in range(10):
-            #        self.select_prev_chat()
-            #elif key == "d":
-            #    for i in range(10):
-            #        self.select_next_chat()
+                if self.macro_recording == None:
+                    # start macro recording
+                    async def record_macro(self, key):
+                        if "a" < key.lower() < "z":
+                            self.macro_recording = key
+                            self.popup_message(f"recording into {key}")
+                        else:
+                            self.popup_message(f"Register must be [a-zA-Z]")
+
+                    self.spawn_popup(record_macro, "Record into which register?")
+                else:
+                    # end macro recording
+                    self.macros[self.macro_recording] = self.macro_sequence
+                    self.macro_recording = None
+                    self.macro_sequence = []
+            elif key == "@":
+                # execute macro
+                async def ask_macro(self, key):
+                    if key in self.macros.keys():
+                        macro = self.macros[key]
+                        debug(macro)
+                        for k in macro:
+                            await self.handle_key(k, redraw = False)
+                    else:
+                        self.popup_message(f"No such macro @{key}")
+
+                self.spawn_popup(ask_macro, "Execute which macro?")
             elif key == "C":
                 self.select_prev_chat()
             elif key == "c":
@@ -436,6 +469,8 @@ class MainView():
                 self.drawtool.show_indices ^= True
         elif self.mode == "popup":
             action, _ = self.popup
+            # I think this could break
+            self.mode = self.modestack.pop()
             await action(self, key)
         elif self.mode == "insert":
             if key == "ESCAPE":
@@ -451,7 +486,8 @@ class MainView():
             else:
                 self.inputs += key
         self.command_box = ""
-        await self.drawtool.redraw()
+        if redraw:
+            await self.drawtool.redraw()
 
     def insert_move_left(self):
         self.inputs_cursor = max(0, self.cursor - 1)

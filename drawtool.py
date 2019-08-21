@@ -79,7 +79,7 @@ class Drawtool():
                 self.stdscr.addstr(self.H - 1, 0, "/" + self.main_view.search_box, self.main_view.colors["error"])
             else:
                 self.stdscr.addstr(self.H - 1, 0, "/" + self.main_view.search_box)
-        elif self.main_view.mode == "popup":
+        elif self.main_view.mode in ["popup", "popupmessage"]:
             _, question = self.main_view.popup
             self.stdscr.addstr(self.H - 1, 0, question)
         elif self.main_view.mode == "vimmode":
