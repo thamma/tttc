@@ -34,6 +34,8 @@ class MainView():
         self.inputs = ""
         self.inputs_cursor = 0
 
+        self.edit_message = None
+
         self.popup = None
 
         self.drawtool = drawtool.Drawtool(self)
@@ -372,6 +374,8 @@ class MainView():
                 self.vimline_box = ""
             elif key == "RETURN" or key == "y":
                 await self.send_message()
+            elif key == "Q":
+                await self.quit()
             elif key == "q":
                 if self.macro_recording == None:
                     # start macro recording
@@ -404,7 +408,7 @@ class MainView():
                 self.select_prev_chat()
             elif key == "c":
                 self.select_next_chat()
-            elif key == "e":
+            elif key == "E":
                 self.text_emojis ^= True
             elif key == "R":
                 await self.mark_read()
@@ -430,6 +434,16 @@ class MainView():
                     self.spawn_popup(action_handler, question)
 
                     await self.drawtool.redraw()
+            elif key == "e":
+                if self.command_box:
+                    try:
+                        n = int(self.command_box)
+                    except:
+                        return
+                    self.edit_message = self.dialogs[self.selected_chat]["messages"][n]
+                    self.mode = "edit"
+                    self.inputs = emojis.decode(self.edit_message.text)
+                    self.command_box = ""
             elif key == "r":
                 if self.command_box:
                     try:
@@ -472,6 +486,29 @@ class MainView():
             # I think this could break
             self.mode = self.modestack.pop()
             await action(self, key)
+        elif self.mode == "edit":
+            if key == "ESCAPE":
+                async def ah(self, key):
+                    if key in ["Y", "y", "RETURN"]:
+                        edit = await self.edit_message.edit(self.inputs)
+                        await self.on_message(edit)
+                        # TODO: update message in chat
+                        # this on_message call does not work reliably
+                        self.mode = "normal"
+                    else:
+                        self.popup_message("Edit discarded.")
+                        self.mode = "normal"
+                self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
+            elif key == "LEFT":
+                self.insert_move_left()
+            elif key == "RIGHT":
+                self.insert_move_right()
+            elif key == "BACKSPACE":
+                self.inputs = self.inputs[0:-1]
+            elif key == "RETURN":
+                self.inputs += "\n"
+            else:
+                self.inputs += key
         elif self.mode == "insert":
             if key == "ESCAPE":
                 self.mode = "normal"

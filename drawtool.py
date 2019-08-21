@@ -91,7 +91,7 @@ class Drawtool():
         for index, line in enumerate(self._get_input_lines(self.main_view.inputs, width = self.W - 4)[-self.input_lines:]):
             self.stdscr.addstr(self.H - self.input_lines - 2 + index, 2, f"{line}")
         
-        if self.main_view.mode == "insert":
+        if self.main_view.mode in ["insert", "edit"]:
             curses.curs_set(1)
             y, x = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
             self.stdscr.move(self.H - self.input_lines - 2 + y, 2 + x)
