@@ -22,6 +22,7 @@ class AuthView():
         self.inputs = ""
         self.w, self.h = curses.COLS, curses.LINES
         self.fin = False
+        self.showinput = True
 
 
     async def textinput(self):
@@ -47,7 +48,7 @@ class AuthView():
                 self.stdscr.refresh()
                 self.phone = await self.textinput()
                 try:
-                    response = await self.client.send_code_request(self.phone)
+                    response = await self.client.send_code_request(self.phone.replace("+","00").replace(" ",""))
                     if not response.phone_registered:
                         self.stdscr.addstr("This phone number is not registered in telegram. ")
                         self.stdscr.refresh()
@@ -59,24 +60,27 @@ class AuthView():
                 except Exception as e: 
                     self.stdscr.addstr("Incorrect phone number. ")
                     self.stdscr.refresh()
-            self.stdscr.addstr("auth with code now.")
+            self.stdscr.addstr("Now authentificate with the code telegram sent to you.")
             self.stdscr.refresh()
-            self.code = await self.textinput()
-            try:
-                await self.client.sign_in(self.phone, self.code)
-            except telethon.errors.SessionPasswordNeededError:
-                self.stdscr.addstr("Password required to log in")
-                self.stdscr.refresh()
-                self.passwd = await self.textinput()
+            while True:
                 try:
-                    await self.client.sign_in(password=self.passwd)
-                    # TODO: debug me
-                except:
-                    show_stacktrace()
-            except telethon.errors.rpcerrorlist.PhoneCodeInvalidError:
-                pass
-
-        self.stdscr.addstr(f"auth successful. ")
+                    self.code = await self.textinput()
+                    await self.client.sign_in(self.phone.replace("+","00").replace(" ",""), self.code)
+                except telethon.errors.rpcerrorlist.PhoneCodeInvalidError:
+                    self.stdscr.addstr("The authentification code was wrong. Please try again.")
+                    self.stdscr.refresh()
+                except telethon.errors.SessionPasswordNeededError:
+                    self.showinput = False
+                    self.stdscr.addstr("A 2FA password is required to log in.")
+                    self.stdscr.refresh()
+                    while True:
+                        self.passwd = await self.textinput()
+                        try:
+                            await self.client.sign_in(password=self.passwd)
+                        except telethon.errors.PasswordHashInvalidError:
+                            self.stdscr.addstr("Incorrect password. Try again.")
+                            self.stdscr.refresh()
+        self.stdscr.addstr("Authentification successfull. Please wait until the client has finished loading.")
         self.stdscr.refresh()
 
     async def handle_key(self, key):
@@ -87,7 +91,10 @@ class AuthView():
             self.inputs = self.inputs[0:-1]
         else:
             self.inputs += key
-        self.stdscr.addstr(20, 50, self.inputs)
+        if self.showinput:
+            self.stdscr.addstr(20, 50, self.inputs)
+        else:
+            self.stdscr.addstr(20, 50, "*"*len(self.inputs))
         self.stdscr.clrtoeol()
         self.stdscr.refresh()
 
