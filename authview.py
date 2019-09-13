@@ -63,6 +63,7 @@ class AuthView():
             self.stdscr.addstr("Now authentificate with the code telegram sent to you.")
             self.stdscr.refresh()
             while True:
+                done = False
                 try:
                     self.code = await self.textinput()
                     await self.client.sign_in(self.phone.replace("+","00").replace(" ",""), self.code)
@@ -77,9 +78,13 @@ class AuthView():
                         self.passwd = await self.textinput()
                         try:
                             await self.client.sign_in(password=self.passwd)
+                            done = True
+                            break
                         except telethon.errors.PasswordHashInvalidError:
                             self.stdscr.addstr("Incorrect password. Try again.")
                             self.stdscr.refresh()
+                if done:
+                    break
         self.stdscr.addstr("Authentification successfull. Please wait until the client has finished loading.")
         self.stdscr.refresh()
 
