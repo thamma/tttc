@@ -15,3 +15,23 @@ Once you obtained your own api key and hash, you need to set them as your enviro
 `TTTC_API_ID` and `TTTC_API_HASH`, respectively.
 
 The client can be run with `python3 tttc.py`.
+
+## Keybindings
+Currently, there is no way of changing the keybindings in a config. This is subject to change in a future update.
+
+The default key bindings are
+
+Key | Function
+--|--
+i| Enter insert mode (to compose a message)
+y, Return | Send message
+Esc | Cancel, Exit current mode
+c/C | Previous/Next Dialog
+E | Toggle emoji ASCII display
+`n` e | Edit message `n` (ESC to open prompt to save changes)
+`n` r | Reply to message `n` (submit draft)
+`n` d | Delete message `n`
+/ | enter search mode
+n/N | Previous/Next search result
+Q | exit TTTC
+q `r` | Record macro into register `r`
