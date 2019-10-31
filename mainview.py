@@ -89,20 +89,22 @@ class MainView():
                 dialog["messages"].insert(0, newmessage[0])
                 if not event.out:
                     dialog["unread_count"] += 1
+                    os.system(f"notify-send -i apps/telegram \"{dialog['dialog'].name}\" \"{newmessage[0].message}\"")
                 front = self.dialogs.pop(idx)
                 self.dialogs = [front] + self.dialogs
                 break
-        # auto adjust relative replys to match shifted message offsets
-        if event.chat_id == self.dialogs[self.selected_chat]["dialog"].id:
-            if self.inputs.startswith("r"):
-                num = self.inputs[1:].split()[0]
-                try:
-#                    num = int(s[1:].split()[0])
-                    number = int(num)
-                    msg = self.inputs.replace("r" + num, "r" + str(number+1))
-                    self.inputs = msg
-                except:
-                    pass
+#old dead code
+#        # auto adjust relative replys to match shifted message offsets
+#        if event.chat_id == self.dialogs[self.selected_chat]["dialog"].id:
+#            if self.inputs.startswith("r"):
+#                num = self.inputs[1:].split()[0]
+#                try:
+##                    num = int(s[1:].split()[0])
+#                    number = int(num)
+#                    msg = self.inputs.replace("r" + num, "r" + str(number+1))
+#                    self.inputs = msg
+#                except:
+#                    pass
         # dont switch the dialoge upon arriving messages
         if idx == self.selected_chat:
             self.selected_chat = 0
