@@ -2,6 +2,7 @@
 # https://github.com/muan/emojilib/blob/master/emojis.json
 # TODO implement semi-automatic update function
 emojis = {
+  "lenny": "( ͡° ͜ʖ ͡°)",
   "grinning": "😀",
   "grimacing": "😬",
   "grin": "😁",
