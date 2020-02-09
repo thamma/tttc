@@ -4,7 +4,7 @@ from telethon import events
 import resources
 import os
 import curses
-from subprocess import call, Popen, PIPE
+from subprocess import call
 import drawtool
 import emojis
 import shlex
@@ -14,6 +14,8 @@ import datetime
 import re
 from tttcutils import debug, show_stacktrace
 import subprocess
+import pyperclip
+
 
 
 class MainView():
@@ -453,8 +455,7 @@ class MainView():
                     except:
                         return
                     yank = self.dialogs[self.selected_chat]["messages"][n].text
-                    Popen(args=['xsel', '-i', '-b'], stdin=PIPE) \
-                        .communicate(input=yank.encode('utf-8'))
+                    pyperclip.copy(yank)
                     self.command_box = ""
             elif key == "r":
                 if self.command_box:
