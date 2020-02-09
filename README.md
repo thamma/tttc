@@ -31,6 +31,7 @@ E | Toggle emoji ASCII display
 `n` e | Edit message `n` (ESC to open prompt to save changes)
 `n` r | Reply to message `n` (submit draft)
 `n` d | Delete message `n`
+`n` y | Yank/copy message `n`
 / | enter search mode
 n/N | Previous/Next search result
 Q | exit TTTC
