@@ -4,7 +4,7 @@ from telethon import events
 import resources
 import os
 import curses
-from subprocess import call
+from subprocess import call, Popen, PIPE
 import drawtool
 import emojis
 import shlex
@@ -374,7 +374,7 @@ class MainView():
             elif key == ":":
                 self.mode = "vimmode"
                 self.vimline_box = ""
-            elif key == "RETURN" or key == "y":
+            elif key == "RETURN" or key == "Y":
                 await self.send_message()
             elif key == "Q":
                 await self.quit()
@@ -426,7 +426,7 @@ class MainView():
                         await self.drawtool.redraw()
                         return
                     async def action_handler(self, key):
-                        if key in ["y","Y"]:
+                        if key in ["Y"]:
                             to_delete = self.dialogs[self.selected_chat]["messages"][n]
                             await to_delete.delete()
                             self.dialogs[self.selected_chat]["messages"].pop(n)
@@ -445,6 +445,16 @@ class MainView():
                     self.edit_message = self.dialogs[self.selected_chat]["messages"][n]
                     self.mode = "edit"
                     self.inputs = emojis.decode(self.edit_message.text)
+                    self.command_box = ""
+            elif key == "y":
+                if self.command_box:
+                    try:
+                        n = int(self.command_box)
+                    except:
+                        return
+                    yank = self.dialogs[self.selected_chat]["messages"][n].text
+                    Popen(args=['xsel', '-i', '-b'], stdin=PIPE) \
+                        .communicate(input=yank.encode('utf-8'))
                     self.command_box = ""
             elif key == "r":
                 if self.command_box:
@@ -491,7 +501,7 @@ class MainView():
         elif self.mode == "edit":
             if key == "ESCAPE":
                 async def ah(self, key):
-                    if key in ["Y", "y", "RETURN"]:
+                    if key in ["Y", "RETURN"]:
                         edit = await self.edit_message.edit(self.inputs)
                         await self.on_message(edit)
                         # TODO: update message in chat
