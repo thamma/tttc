@@ -428,7 +428,7 @@ class MainView():
                         await self.drawtool.redraw()
                         return
                     async def action_handler(self, key):
-                        if key in ["Y"]:
+                        if key in ["y","Y"]:
                             to_delete = self.dialogs[self.selected_chat]["messages"][n]
                             await to_delete.delete()
                             self.dialogs[self.selected_chat]["messages"].pop(n)
@@ -502,7 +502,7 @@ class MainView():
         elif self.mode == "edit":
             if key == "ESCAPE":
                 async def ah(self, key):
-                    if key in ["Y", "RETURN"]:
+                    if key in ["Y", "y", "RETURN"]:
                         edit = await self.edit_message.edit(self.inputs)
                         await self.on_message(edit)
                         # TODO: update message in chat
