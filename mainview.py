@@ -95,18 +95,6 @@ class MainView():
                 front = self.dialogs.pop(idx)
                 self.dialogs = [front] + self.dialogs
                 break
-#old dead code
-#        # auto adjust relative replys to match shifted message offsets
-#        if event.chat_id == self.dialogs[self.selected_chat]["dialog"].id:
-#            if self.inputs.startswith("r"):
-#                num = self.inputs[1:].split()[0]
-#                try:
-##                    num = int(s[1:].split()[0])
-#                    number = int(num)
-#                    msg = self.inputs.replace("r" + num, "r" + str(number+1))
-#                    self.inputs = msg
-#                except:
-#                    pass
         # dont switch the dialoge upon arriving messages
         if idx == self.selected_chat:
             self.selected_chat = 0
@@ -144,47 +132,6 @@ class MainView():
                 } for dialog in chats ]
         await self.drawtool.redraw()
         self.ready = True
-        while True:
-            s = await self.textinput()
-            if self.fin:
-                return
-            if s.startswith("r"):
-                try:
-                    num = int(s[1:].split()[0])
-                except:
-                    continue
-                s = s.replace("r" + str(num) + " ", "")
-                reply_msg = self.dialogs[self.selected_chat]["messages"][num]
-                s = emojis.encode(s)
-                reply = await reply_msg.reply(s)
-                await self.on_message(reply)
-            elif s.startswith("media"):
-                try:
-                    num = int(s[5:].split()[0])
-                except:
-                    continue
-                message = self.dialogs[self.selected_chat]["messages"][num]
-                if message.media:
-                    os.makedirs("/tmp/tttc/", exist_ok=True)
-                    path = await self.client.download_media(message.media, "/tmp/tttc/")
-                    # TODO mute calls
-                    if message.media.photo:
-                        sizes = message.media.photo.sizes
-                        w, h = sizes[0].w, sizes[0].h
-                        # w, h
-                        basesize = 1500
-                        w3m_command=f"0;1;0;0;{basesize};{int(basesize*h/w)};;;;;{path}\n4;\n3;"
-                        W3MIMGDISPLAY="/usr/lib/w3m/w3mimgdisplay"
-                        os.system(f"echo -e '{w3m_command}' | {W3MIMGDISPLAY} & disown")
-                        await self.textinput()
-                    else:
-                        subprocess.call(["xdg-open", "{shlex.quote(path)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-                        #os.system(f"(xdg-open {shlex.quote(path)} 2>&1 > /dev/null) & disown")
-            else:
-                s = emojis.encode(s)
-                outgoing_message = await self.dialogs[self.selected_chat]["dialog"].send_message(s)
-                await self.on_message(outgoing_message)
-            await self.drawtool.redraw()
 
     def select_next_chat(self):
         # if wrapping not allowed:
@@ -216,7 +163,6 @@ class MainView():
         else:
             while index > self.selected_chat:
                 self.select_next_chat()
-
 
     def is_subsequence(self, xs, ys):
         xs = list(xs)
@@ -299,7 +245,7 @@ class MainView():
             os.makedirs("/tmp/tttc/", exist_ok=True)
             # TODO test if file exists, ask for confirmation to replace or download again
             path = await self.client.download_media(message.media, "/tmp/tttc/")
-            if hasattr(message.media, "photo") and False:
+            if hasattr(message.media, "photo") and False: # Fix this test
                 sizes = message.media.photo.sizes
                 w, h = sizes[0].w, sizes[0].h
                 # w, h
