@@ -6,7 +6,7 @@ It aims to provide a user experience similar to that of [VIM](https://www.vim.or
 
 ## Requirements
 TTTC uses the `curses`, `pyperclip` and `telethon` python libraries. Curses is usually shipped with
-your python installation, but `telethon` can easily be installed via `pip`.
+your python installation. You can install the required libraries with `pip install -r requirements.txt`.
 
 In order to use TTTC, you will need your own Telegram `api_id` and `api_hash`.
 You can read more about how to get them [here](https://core.telegram.org/api/obtaining_api_id).
@@ -32,6 +32,9 @@ E | Toggle emoji ASCII display
 `n` r | Reply to message `n` (submit draft)
 `n` d | Delete message `n`
 `n` y | Yank/copy message `n`
+`n` l | Download media of message `n`
+`n` L | (Re)Download media of message `n` (force)
+`n` m | Open downloaded file of message `n` with `xdg-open`
 / | enter search mode
 n/N | Previous/Next search result
 Q | exit TTTC

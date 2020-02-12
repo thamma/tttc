@@ -1,0 +1,2 @@
+Telethon>=1.10.8
+pyperclip>=1.7.0

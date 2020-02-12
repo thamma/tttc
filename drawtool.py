@@ -9,6 +9,9 @@ import config
 import textwrap
 from tttcutils import show_stacktrace, debug
 
+import logging
+logging.basicConfig(filename='/tmp/tttc.log', level=logging.DEBUG)
+
 class Drawtool():
     def __init__(self, main_view):
         self.client = main_view.client
@@ -81,7 +84,8 @@ class Drawtool():
                 self.stdscr.addstr(self.H - 1, 0, "/" + self.main_view.search_box)
         elif self.main_view.mode in ["popup", "popupmessage"]:
             _, question = self.main_view.popup
-            self.stdscr.addstr(self.H - 1, 0, question)
+            text = question + (self.main_view.popup_input or "")
+            self.stdscr.addstr(self.H - 1, 0, text)
         elif self.main_view.mode == "vimmode":
             self.stdscr.addstr(self.H - 1, 0, ":" + self.main_view.vimline_box)
         else:
@@ -101,6 +105,9 @@ class Drawtool():
         elif self.main_view.mode == "vimmode":
             curses.curs_set(1)
             self.stdscr.move(self.H - 1, 1 + len(self.main_view.vimline_box))
+        elif self.main_view.mode == "popup" and self.main_view.popup_input is not None:
+            curses.curs_set(1)
+            self.stdscr.move(self.H - 1, len(text))
         else:
             curses.curs_set(0)
         self.stdscr.refresh()
@@ -152,7 +159,7 @@ class Drawtool():
             y = 1
             for index in range(self.chats_num):
                 dialog = self.main_view.dialogs[index + offset]
-                message = dialog["messages"][0] if "messages" in dialog else dialog["dialog"].message
+                message = dialog["messages"][0] if len(dialog["messages"]) > 0 else dialog["dialog"].message
                 message_string = message.text if message.text else "[Non-text object]"
                 if self.main_view.text_emojis:
                     message_string = emojis.decode(message_string)
@@ -277,7 +284,8 @@ class Drawtool():
                     media_type = f"Document ({filename})"
                 else:
                     media_type = f"Document ({message.media.document.mime_type})"
-            lines += [ f"[{media_type}]" ]
+            downloaded = " (saved)" if (message.id in main_view.dialogs[main_view.selected_chat]["downloads"]) else ""
+            lines += [ f"[{media_type}]{downloaded}" ]
 
         reply = ""
         if message.is_reply:
@@ -311,7 +319,7 @@ class Drawtool():
     async def load_messages(self, chat_index):
         main_view = self.main_view
         index = chat_index
-        if not "messages" in main_view.dialogs[index]:
+        if len(main_view.dialogs[index]["messages"]) == 0 :
             temp =  await main_view.client.get_messages(main_view.dialogs[index]["dialog"], 50)
             main_view.dialogs[index]["messages"] = [ message for message in temp ]
 

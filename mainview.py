@@ -16,6 +16,8 @@ from tttcutils import debug, show_stacktrace
 import subprocess
 import pyperclip
 
+import logging
+logging.basicConfig(filename='/tmp/tttc.log', level=logging.DEBUG)
 
 
 class MainView():
@@ -32,6 +34,10 @@ class MainView():
         self.macros = {}
         self.macro_recording = None
         self.macro_sequence = []
+
+        self.popup_input = None
+
+        self.last_saved_location = "/tmp/tttc/"
 
         self.inputs = ""
         self.inputs_cursor = 0
@@ -104,23 +110,12 @@ class MainView():
             pass
         await self.drawtool.redraw()
 
-    async def textinput(self):
-        self.inputs = ""
-        with await self.inputevent:
-            await self.inputevent.wait()
-        if self.fin:
-            return ""
-        out = self.inputs
-        self.inputs = ""
-        return out
-
     async def run(self):
         try:
             chats = await self.client.get_dialogs()
         except sqlite3.OperationalError:
             self.stdscr.addstr("Database is locked. Cannot connect with this session. Aborting")
             self.stdscr.refresh()
-            await self.textinput()
             await self.quit()
         self.dialogs = [
                 {
@@ -128,6 +123,8 @@ class MainView():
                     "unread_count": dialog.unread_count,
                     "online": dialog.entity.status.to_dict()["_"] == "UserStatusOnline" if hasattr(dialog.entity, "status") and dialog.entity.status else None,
                     "online_until": None,
+                    "downloads": dict(),
+                    "messages": []
                 #    "last_seen": dialog.entity.status.to_dict()["was_online"] if online == False  else None,
                 } for dialog in chats ]
         await self.drawtool.redraw()
@@ -237,38 +234,73 @@ class MainView():
         await self.client.send_read_acknowledge(dialog, lastmessage)
         self.dialogs[self.selected_chat]["unread_count"] = 0
 
-    async def show_media(self, num = None):
-        if not num:
+    async def download_attachment(self, num = None, force = False):
+        if num is None:
             return
         message = self.dialogs[self.selected_chat]["messages"][num]
-        if message.media:
-            os.makedirs("/tmp/tttc/", exist_ok=True)
-            # TODO test if file exists, ask for confirmation to replace or download again
-            path = await self.client.download_media(message.media, "/tmp/tttc/")
-            if hasattr(message.media, "photo") and False: # Fix this test
-                sizes = message.media.photo.sizes
-                w, h = sizes[0].w, sizes[0].h
-                # w, h
-                basesize = 300
-                w3m_command=f"0;1;0;0;{basesize};{int(basesize*h/w)};;;;;{path}\n4;\n3;"
-                W3MIMGDISPLAY="/usr/lib/w3m/w3mimgdisplay"
-                echo_sp = subprocess.Popen(["echo", "-e", f"{w3m_command}"], stdout = subprocess.PIPE)
-                w3m_sp = subprocess.Popen([f"{W3MIMGDISPLAY}"], stdin = echo_sp.stdout)
+
+        if message.id in self.dialogs[self.selected_chat]["downloads"] and not force:
+            logging.info(self.dialogs[self.selected_chat]["downloads"])
+            self.popup_message(f"File was previously downloaded as: {self.dialogs[self.selected_chat]['downloads'][message.id]}. Use the force (to download anyway).")
+            return
+
+        self.popup_input = f"{os.path.dirname(self.last_saved_location)}/"
+
+        async def handler(self, key):
+            if key == "ESCAPE":
+                self.popup_input = None
+                return True # done processing the popup
+            elif key == "BACKSPACE":
+                if self.popup_input == "":
+                    pass
+                else:
+                    self.popup_input = self.popup_input[0:-1]
+            elif key == "RETURN":
+                # save message
+                filename = self.popup_input or '/tmp/tttc/'
+                async def cb(recv, maximum):
+                    percentage = 100 * recv / maximum
+                    downloadtext = f"downloading to {filename}: "
+                    self.popup[1] = downloadtext + f"{percentage:.2f}%"
+                    self.popup_input = None
+                    await self.drawtool.redraw()
+                path = await self.client.download_media(message.media, filename, progress_callback = cb)
+                if not path:
+                    self.popup_message(f"Could not save file. Maybe there is no attachment?")
+                    return True
+                self.dialogs[self.selected_chat]["downloads"][message.id] = path
+                self.last_saved_location = path
+                # now we can work with the downloaded file, show it in filesystem
+                self.popup_input = None
+                self.popup_message(f"Saved as {path}")
+                return True
             else:
-                subprocess.Popen(["xdg-open", f"{path}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+                self.popup_input += key
+            return False
+        self.spawn_popup(handler, "Save file anew as: " if force else "Save file as: ")
+
+    async def show_media(self, num = None):
+        if num is None:
+            return
+        message = self.dialogs[self.selected_chat]["messages"][num]
+        if message.id not in self.dialogs[self.selected_chat]["downloads"]:
+            self.popup_message("No media found for this message. Did you download it?")
+            return
+        path = self.dialogs[self.selected_chat]["downloads"][message.id]
+        subprocess.Popen(["xdg-open", f"{path}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     def popup_message(self, question):
         self.modestack.append(self.mode)
         self.mode = "popupmessage"
         async def action_handler(self, key):
-            pass
-        self.popup = (action_handler, question)
+            return True
+        self.popup = [action_handler, question]
 
     def spawn_popup(self, action_handler, question):
         # on q press
         self.modestack.append(self.mode)
         self.mode = "popup"
-        self.popup = (action_handler, question)
+        self.popup = [action_handler, question]
 
     async def handle_key(self, key, redraw = True):
         if self.mode == "popupmessage":
@@ -335,6 +367,7 @@ class MainView():
                             self.popup_message(f"recording into {key}")
                         else:
                             self.popup_message(f"Register must be [a-zA-Z]")
+                        return True
 
                     self.spawn_popup(record_macro, "Record into which register?")
                 else:
@@ -352,6 +385,7 @@ class MainView():
                             await self.handle_key(k, redraw = False)
                     else:
                         self.popup_message(f"No such macro @{key}")
+                    return True
 
                 self.spawn_popup(ask_macro, "Execute which macro?")
             elif key == "C":
@@ -380,6 +414,7 @@ class MainView():
                             self.dialogs[self.selected_chat]["messages"].pop(n)
                             self.command_box = ""
                         self.mode = "normal"
+                        return True
                     question = f"Are you really sure you want to delete message {n}? [y/N]"
                     self.spawn_popup(action_handler, question)
 
@@ -415,6 +450,15 @@ class MainView():
                     await self.on_message(reply)
                     self.command_box = ""
                     self.inputs = ""
+            elif key in ["L", "l"]:
+                force = (key == "L")
+                if self.command_box:
+                    try:
+                        n = int(self.command_box)
+                    except:
+                        return
+                    self.command_box = ""
+                    await self.download_attachment(n, force)
             elif key == "m":
                 if self.command_box:
                     try:
@@ -443,8 +487,10 @@ class MainView():
         elif self.mode == "popup":
             action, _ = self.popup
             # I think this could break
-            self.mode = self.modestack.pop()
-            await action(self, key)
+            done = await action(self, key)
+            if done:
+                self.mode = self.modestack.pop()
+                self.popup_input = None
         elif self.mode == "edit":
             if key == "ESCAPE":
                 async def ah(self, key):
@@ -457,6 +503,7 @@ class MainView():
                     else:
                         self.popup_message("Edit discarded.")
                         self.mode = "normal"
+                    return True
                 self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
             elif key == "LEFT":
                 self.insert_move_left()
