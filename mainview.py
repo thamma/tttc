@@ -36,8 +36,9 @@ class MainView():
         self.macro_sequence = []
 
         self.popup_input = None
-
         self.last_saved_location = "/tmp/tttc/"
+
+        self.tab_selection = 0
 
         self.inputs = ""
         self.inputs_cursor = 0
@@ -279,6 +280,32 @@ class MainView():
             return False
         self.spawn_popup(handler, "Save file anew as: " if force else "Save file as: ")
 
+    async def open_link(self, num = None):
+        if num is None:
+            return
+        message = self.dialogs[self.selected_chat]["messages"][num]
+        if message.entities:
+            links = [ text for (entity_type, text) in message.get_entities_text() if entity_type.to_dict()["_"] == "MessageEntityUrl" ]
+            if len(links) == 1:
+                # if there is a unique link to open, open it.
+                link = links[0]
+                subprocess.Popen(["xdg-open", f"{link}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+            elif len(links) > 1:
+                # user selects which link to open
+                self.tab_selection = 0
+                async def handler(self, key):
+                    if key == "TAB":
+                        self.tab_selection = (self.tab_selection + 1) % len(links)
+                        self.popup[1] = f"Select link to open (TAB): {links[self.tab_selection]}"
+                        return False
+                    elif key == "ESCAPE":
+                        return True
+                    elif key == "RETURN":
+                        link = links[self.tab_selection]
+                        subprocess.Popen(["xdg-open", f"{link}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+                        return True
+                self.spawn_popup(handler, f"Select link to open (TAB): {links[self.tab_selection]}")
+
     async def show_media(self, num = None):
         if num is None:
             return
@@ -459,6 +486,14 @@ class MainView():
                         return
                     self.command_box = ""
                     await self.download_attachment(n, force)
+            elif key == "o":
+                if self.command_box:
+                    try:
+                        n = int(self.command_box)
+                    except:
+                        return
+                    self.command_box = ""
+                    await self.open_link(n)
             elif key == "m":
                 if self.command_box:
                     try:

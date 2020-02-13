@@ -35,6 +35,7 @@ E | Toggle emoji ASCII display
 `n` l | Download media of message `n`
 `n` L | (Re)Download media of message `n` (force)
 `n` m | Open downloaded file of message `n` with `xdg-open`
+`n` o | Open link(s) in message `n`. Use TAB to select between multiple links
 / | enter search mode
 n/N | Previous/Next search result
 Q | exit TTTC
