@@ -257,7 +257,10 @@ class Drawtool():
 
 
 
-    def draw_message(self, main_view, message, chat_idx):
+    def draw_message(self, main_view, chat_idx):
+        messages = main_view.dialogs[main_view.selected_chat]["messages"]
+        message = messages[chat_idx]
+
         maxtextwidth = int(self.single_chat_fraction * self.W) - 2
         lines = []
         if message.text:
@@ -322,22 +325,26 @@ class Drawtool():
                 out.append(reply)
         return (out, message)
 
-    async def load_messages(self, chat_index):
+    async def load_messages(self, chat_index, amount = 50):
+        # assert there are at least amount messages loaded
         main_view = self.main_view
         index = chat_index
-        if len(main_view.dialogs[index]["messages"]) == 0 :
-            temp =  await main_view.client.get_messages(main_view.dialogs[index]["dialog"], 50)
+        if len(main_view.dialogs[index]["messages"]) < amount :
+            logging.info(f"only {len(main_view.dialogs[index]['messages'])} are loaded. lets load {2 * amount}")
+            # to keep the amortized times of loading messages constant, double the number loaded every time
+            temp =  await main_view.client.get_messages(main_view.dialogs[index]["dialog"], 2 * amount)
             main_view.dialogs[index]["messages"] = [ message for message in temp ]
 
     async def draw_messages(self, offset = 0):
         main_view = self.main_view
-        await self.load_messages(main_view.selected_chat)
+
+        await self.load_messages(main_view.selected_chat, main_view.message_offset + 50)
         messages = main_view.dialogs[main_view.selected_chat]["messages"]
         max_rows = self.H - self.input_lines - 3 - 1
         lines = []
         chat_count = 0
         while len(lines) < max_rows + offset and chat_count < len(messages):
-            text, message = self.draw_message(main_view, messages[chat_count], chat_count)
+            text, message = self.draw_message(main_view, chat_count + main_view.message_offset)
             for line in reversed(text):
                 lines.append((line, message))
             lines.append(("",message))

@@ -38,6 +38,10 @@ class MainView():
         self.popup_input = None
         self.last_saved_location = "/tmp/tttc/"
 
+        # the offset which messages are being displayed.
+        # the number corresponds to the lowest message shown on screen as the messages are drawing upwards
+        self.message_offset = 0
+
         self.tab_selection = 0
 
         self.inputs = ""
@@ -132,12 +136,14 @@ class MainView():
         self.ready = True
 
     def select_next_chat(self):
+        self.message_offset = 0
         # if wrapping not allowed:
         # self.selected_chat = min(self.selected_chat + 1, len(self.dialogs) - 1)
         self.selected_chat = (self.selected_chat + 1) % (len(self.dialogs))
         self.center_selected_chat()
 
     def select_prev_chat(self):
+        self.message_offset = 0
         # if wrapping not allowed:
         # self.selected_chat = max(self.selected_chat - 1, 0)
         self.selected_chat = (self.selected_chat - 1) % (len(self.dialogs))
@@ -152,6 +158,7 @@ class MainView():
             self.selected_chat_offset = self.selected_chat - self.drawtool.chats_num // 2
 
     def select_chat(self, index):
+        self.message_offset = 0
         if index < -1 or index >= len(self.dialogs):
             return
         if index == -1:
@@ -415,6 +422,10 @@ class MainView():
                     return True
 
                 self.spawn_popup(ask_macro, "Execute which macro?")
+            elif key == "UP":
+                self.message_offset += 1
+            elif key == "DOWN":
+                self.message_offset = max(0, self.message_offset - 1)
             elif key == "C":
                 self.select_prev_chat()
             elif key == "c":
