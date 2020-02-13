@@ -279,7 +279,13 @@ class Drawtool():
             elif media_type == "MessageMediaDocument":
                 atts = message.media.document.attributes
                 filename = [ x for x in atts if x.to_dict()["_"] == "DocumentAttributeFilename" ]
-                if filename:
+                sticker = [ x for x in atts if x.to_dict()["_"] == "DocumentAttributeSticker" ]
+                if sticker:
+                    stickertext = sticker[0].alt
+                    if main_view.text_emojis:
+                        stickertext = emojis.decode(stickertext)
+                    media_type = f"{stickertext}  Sticker"
+                elif filename:
                     filename = filename[0].to_dict()["file_name"]
                     media_type = f"Document ({filename})"
                 else:
