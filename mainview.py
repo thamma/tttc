@@ -62,6 +62,7 @@ class MainView():
         self.search_box = ""
         self.vimline_box = ""
         self.command_box = ""
+        self.dialogs = []
 
         # index corresponds to the index in self.dialogs
         self.selected_chat = 0
