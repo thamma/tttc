@@ -17,7 +17,7 @@ import subprocess
 import pyperclip
 
 import logging
-logging.basicConfig(filename='/tmp/tttc.log', level=logging.DEBUG)
+logging.basicConfig(filename='/tmp/tttc.log') #, level=logging.DEBUG)
 
 
 class MainView():
@@ -71,8 +71,22 @@ class MainView():
             
         self.selected_message = None
 
-        self.mode = "normal"
-        self.modestack = []
+        self.modestack = ["normal"]
+
+    @property
+    def mode(self):
+        try:
+            return self.modestack[-1]
+        except IndexError:
+            self.modestack = ["normal"]
+            return "normal"
+
+    @mode.setter
+    def mode(self, newmode):
+        # i think we might need this
+        if self.modestack == ["normal"] and newmode == "normal":
+            return
+        self.modestack.append(newmode)
 
     async def quit(self):
         self.fin = True
@@ -100,7 +114,7 @@ class MainView():
             if dialog["dialog"].id == event.chat_id:
                 # stuff to do upon arriving messages
                 newmessage = await self.client.get_messages(dialog["dialog"], 1)
-                dialog["messages"].insert(0, newmessage[0])
+                # TODO: this is incorrect for edited messages
                 if not event.out:
                     dialog["unread_count"] += 1
                     os.system(f"notify-send -i apps/telegram \"{dialog['dialog'].name}\" \"{newmessage[0].message}\"")
@@ -269,10 +283,13 @@ class MainView():
                 filename = self.popup_input or '/tmp/tttc/'
                 async def cb(recv, maximum):
                     percentage = 100 * recv / maximum
-                    downloadtext = f"downloading to {filename}: "
-                    self.popup[1] = downloadtext + f"{percentage:.2f}%"
+                    downloadtext = f"downloading to {filename}: {percentage:.2f}%"
+                    self.popup[1] = downloadtext
                     self.popup_input = None
                     await self.drawtool.redraw()
+                    if (percentage == 100):
+                        # we auto clear the popup here
+                        self.modestack.pop()
                 path = await self.client.download_media(message.media, filename, progress_callback = cb)
                 if not path:
                     self.popup_message(f"Could not save file. Maybe there is no attachment?")
@@ -289,6 +306,10 @@ class MainView():
         self.spawn_popup(handler, "Save file anew as: " if force else "Save file as: ")
 
     async def open_link(self, num = None):
+        def httpify(s):
+            if s.startswith("http"):
+                return
+            return f"https://{s}"
         if num is None:
             return
         message = self.dialogs[self.selected_chat]["messages"][num]
@@ -297,7 +318,7 @@ class MainView():
             if len(links) == 1:
                 # if there is a unique link to open, open it.
                 link = links[0]
-                subprocess.Popen(["xdg-open", f"{link}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+                subprocess.Popen(["xdg-open", f"{httpify(link)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
             elif len(links) > 1:
                 # user selects which link to open
                 self.tab_selection = 0
@@ -310,7 +331,7 @@ class MainView():
                         return True
                     elif key == "RETURN":
                         link = links[self.tab_selection]
-                        subprocess.Popen(["xdg-open", f"{link}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
+                        subprocess.Popen(["xdg-open", f"{httpify(link)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
                         return True
                 self.spawn_popup(handler, f"Select link to open (TAB): {links[self.tab_selection]}")
 
@@ -333,21 +354,26 @@ class MainView():
 
     def spawn_popup(self, action_handler, question):
         # on q press
-        self.modestack.append(self.mode)
+        #self.modestack.append(self.mode)
         self.mode = "popup"
         self.popup = [action_handler, question]
 
     async def handle_key(self, key, redraw = True):
-        if self.mode == "popupmessage":
-            self.mode = self.modestack.pop()
+        # no proper keystrokes
         if not self.ready:
             return
         if key == "RESIZE":
             await self.drawtool.resize()
             return
+
+        #  actions that don't consume keystrokes
+        if self.mode == "popupmessage":
+            self.modestack.pop()
         if self.macro_recording:
             if key != "q":
                 self.macro_sequence.append(key)
+
+        # now, keystrokes will be consumed
         if self.mode == "search":
             if key == "ESCAPE" or key == "RETURN":
                 self.mode = "normal"
@@ -397,15 +423,18 @@ class MainView():
                 if self.macro_recording == None:
                     # start macro recording
                     async def record_macro(self, key):
-                        if "a" < key.lower() < "z":
+                        if "a" <= key.lower() <= "z":
                             self.macro_recording = key
+                            self.modestack.pop() # previously popup
                             self.popup_message(f"recording into {key}")
                         else:
+                            self.modestack.pop() # previously popup
                             self.popup_message(f"Register must be [a-zA-Z]")
-                        return True
+                        return False # dont let the key be handled normally
 
                     self.spawn_popup(record_macro, "Record into which register?")
                 else:
+                    self.popup_message(f"Macro recorded into {self.macro_recording}")
                     # end macro recording
                     self.macros[self.macro_recording] = self.macro_sequence
                     self.macro_recording = None
@@ -413,16 +442,16 @@ class MainView():
             elif key == "@":
                 # execute macro
                 async def ask_macro(self, key):
+                    self.modestack.pop()
                     if key in self.macros.keys():
                         macro = self.macros[key]
-                        debug(macro)
                         for k in macro:
                             await self.handle_key(k, redraw = False)
                     else:
                         self.popup_message(f"No such macro @{key}")
-                    return True
-
-                self.spawn_popup(ask_macro, "Execute which macro?")
+                    return False
+                keys = ", ".join(self.macros.keys())
+                self.spawn_popup(ask_macro, f"Execute which macro?{f'   ({keys} exist)' if keys else ''}")
             elif key == "UP":
                 self.message_offset += 1
             elif key == "DOWN":
@@ -536,21 +565,25 @@ class MainView():
             # I think this could break
             done = await action(self, key)
             if done:
-                self.mode = self.modestack.pop()
+                self.modestack.pop()
                 self.popup_input = None
         elif self.mode == "edit":
             if key == "ESCAPE":
                 async def ah(self, key):
+                    self.modestack.pop() # leave edit mode
+                    self.modestack.pop() # leave popup mode
                     if key in ["Y", "y", "RETURN"]:
                         edit = await self.edit_message.edit(self.inputs)
-                        await self.on_message(edit)
-                        # TODO: update message in chat
-                        # this on_message call does not work reliably
-                        self.mode = "normal"
+                        dialog = self.dialogs[self.selected_chat]
+                        msg_index = next((index for index, message in enumerate(dialog["messages"]) if message.id == edit.id), None)
+                        if msg_index != None:
+                            dialog["messages"][msg_index] = edit
+                        else:
+                            pass # this is not supposed to happen
                     else:
                         self.popup_message("Edit discarded.")
-                        self.mode = "normal"
-                    return True
+                    self.inputs = ""
+                    return False
                 self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
             elif key == "LEFT":
                 self.insert_move_left()

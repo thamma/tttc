@@ -5,7 +5,7 @@ import traceback
 def debug(x):
     with open("/tmp/tttc.log", "a") as f:
         f.write(str(x) + "\n")
-    os.system(f"notify-send {shlex.quote(str(x))}")
+    #os.system(f"notify-send {shlex.quote(str(x))}")
 
 def show_stacktrace():
     a = traceback.format_exc()

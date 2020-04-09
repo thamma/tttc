@@ -89,7 +89,10 @@ class Drawtool():
         elif self.main_view.mode == "vimmode":
             self.stdscr.addstr(self.H - 1, 0, ":" + self.main_view.vimline_box)
         else:
-            self.stdscr.addstr(self.H - 1, 0, "--" + self.main_view.mode.upper() + "--")
+            suffix = f"recording {self.main_view.macro_recording}" if self.main_view.macro_recording else ""
+            mode = f"--{self.main_view.mode.upper()}--" if self.main_view.mode != "normal" else ""
+            if (self.main_view.mode != "normal"):
+                self.stdscr.addstr(self.H - 1, 0, mode + suffix)
         self.stdscr.addstr(self.H - 1, int(self.W * 2/3), self.main_view.command_box[:8])
 
         for index, line in enumerate(self._get_input_lines(self.main_view.inputs, width = self.W - 4)[-self.input_lines:]):
