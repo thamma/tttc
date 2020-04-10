@@ -352,11 +352,30 @@ class Drawtool():
                 lines.append((line, message))
             lines.append(("",message))
             chat_count += 1
+            # draw empty line after unread messages
+            dialog = self.main_view.dialogs[main_view.selected_chat]
+            unread = dialog["unread_count"]
+            if (chat_count + main_view.message_offset == unread):
+                lines.append((f"Unread Messages", "hlredwide"))
+                lines.append(("", "hlred"))
+
+        # draw frame now, so we can draw |- bow drawing characters
+        self.draw_frame(0, self.chats_width + 1, self.chats_height, self.W - self.chats_width - 2)
 
         for i in range(min(len(lines)-offset, max_rows)):
             text, message = lines[i + offset]
-            if message.out:
-                self.stdscr.addstr(max_rows - i, int(self.W * (1-self.single_chat_fraction) - 4) + 2, text)
+            if message == "hlred":
+                self.stdscr.addstr(max_rows - i, int(self.W * self.single_chat_fraction) + 2, text, self.main_view.colors["error"])
+            elif message == "hlredwide":
+                width = int(self.W * (1-self.single_chat_fraction) - 4)
+                bar = "─"*(width*2//5 - 4)
+                middlelen = self.W - len(bar) * 2 - int(self.W * self.single_chat_fraction)
+                text = text.center(middlelen)
+                self.stdscr.addstr(max_rows - i, int(self.W * self.single_chat_fraction) + 1, "├"+ bar)
+                self.stdscr.addstr(max_rows - i, int(self.W * self.single_chat_fraction) + 2 + len(bar), text, self.main_view.colors["error"])
+                self.stdscr.addstr(max_rows - i, int(self.W) - len(bar) - 1, bar + "┤")
             else:
-                self.stdscr.addstr(max_rows - i, int(self.W * self.chat_offset_fraction) + 2, text)
-        self.draw_frame(0, self.chats_width + 1, self.chats_height, self.W - self.chats_width - 2)
+                if message.out:
+                    self.stdscr.addstr(max_rows - i, int(self.W * (1-self.single_chat_fraction) - 4) + 2, text)
+                else:
+                    self.stdscr.addstr(max_rows - i, int(self.W * self.chat_offset_fraction) + 2, text)
