@@ -114,7 +114,7 @@ class MainView():
             if dialog["dialog"].id == event.chat_id:
                 # stuff to do upon arriving messages
                 newmessage = await self.client.get_messages(dialog["dialog"], 1)
-                # TODO: this is incorrect for edited messages
+                dialog["messages"].insert(0, newmessage[0])
                 if not event.out:
                     dialog["unread_count"] += 1
                     os.system(f"notify-send -i apps/telegram \"{dialog['dialog'].name}\" \"{newmessage[0].message}\"")
