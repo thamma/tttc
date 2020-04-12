@@ -587,10 +587,6 @@ class MainView():
                     self.inputs = ""
                     return False
                 self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
-            elif key == "LEFT":
-                self.insert_move_left()
-            elif key == "RIGHT":
-                self.insert_move_right()
             elif key == "BACKSPACE":
                 self.inputs = self.inputs[0:-1]
             elif key == "RETURN":
