@@ -65,11 +65,16 @@ class Drawtool():
 
     def _get_cursor_position(self, s, width = 50):
         lines = self._get_input_lines(s, width = width)[-self.input_lines:]
-        if not lines:
-            return (0, 0)
-        x = len(lines[-1])
-        y = len(lines) - 1
-        return y, x
+        for i in range(self.main_view.input_cursor):
+            if self.main_view.input[i] == "\n":
+                x = 0
+                y = y + 1
+            else:
+                x = x + 1
+            if x >= len(lines[y]):
+                x = 0
+                y = y + 1
+        return x, y
 
     async def redraw(self):
         self.recompute_dimensions()
@@ -100,7 +105,7 @@ class Drawtool():
         
         if self.main_view.mode in ["insert", "edit"]:
             curses.curs_set(1)
-            y, x = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
+            x, y = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
             self.stdscr.move(self.H - self.input_lines - 2 + y, 2 + x)
         elif self.main_view.mode == "search":
             curses.curs_set(1)

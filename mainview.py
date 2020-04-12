@@ -587,34 +587,36 @@ class MainView():
                     self.inputs = ""
                     return False
                 self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
-            elif key == "BACKSPACE":
-                self.inputs = self.inputs[0:-1]
-            elif key == "RETURN":
-                self.inputs += "\n"
             else:
-                self.inputs += key
+                self.modify_input(key)
         elif self.mode == "insert":
             if key == "ESCAPE":
                 self.mode = "normal"
-            elif key == "LEFT":
-                self.insert_move_left()
-            elif key == "RIGHT":
-                self.insert_move_right()
-            elif key == "BACKSPACE":
-                self.inputs = self.inputs[0:-1]
-            elif key == "RETURN":
-                self.inputs += "\n"
             else:
-                self.inputs += key
+                self.modify_input(key)
+
         self.command_box = ""
         if redraw:
             await self.drawtool.redraw()
 
+    def modify_input(self, key):
+            if key == "LEFT":
+                self.insert_move_left()
+            elif key == "RIGHT":
+                self.insert_move_right()
+            elif key == "BACKSPACE":
+                if self.inputs_cursor != 0:
+                    self.inputs = self.inputs[:self.inputs_cursor - 1] + self.inputs[self.inputs_cursor:]
+            elif key == "RETURN":
+                self.inputs += "\n"
+            else:
+                self.inputs += key
+
     def insert_move_left(self):
-        self.inputs_cursor = max(0, self.cursor - 1)
+        self.inputs_cursor = max(0, self.inputs_cursor - 1)
 
     def insert_move_right(self):
-        self.inputs_cursor = min(len(self.inputs), self.cursor + 1)
+        self.inputs_cursor = min(len(self.inputs), self.inputs_cursor + 1)
 
     async def handle_key_old(self, key):
         if key == "RETURN":
