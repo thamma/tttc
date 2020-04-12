@@ -308,7 +308,7 @@ class MainView():
     async def open_link(self, num = None):
         def httpify(s):
             if s.startswith("http"):
-                return
+                return s
             return f"https://{s}"
         if num is None:
             return
@@ -318,6 +318,7 @@ class MainView():
             if len(links) == 1:
                 # if there is a unique link to open, open it.
                 link = links[0]
+                debug(["xdg-open", f"{httpify(link)}"])
                 subprocess.Popen(["xdg-open", f"{httpify(link)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
             elif len(links) > 1:
                 # user selects which link to open
@@ -331,6 +332,7 @@ class MainView():
                         return True
                     elif key == "RETURN":
                         link = links[self.tab_selection]
+                        debug(["xdg-open", f"{httpify(link)}"])
                         subprocess.Popen(["xdg-open", f"{httpify(link)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
                         return True
                 self.spawn_popup(handler, f"Select link to open (TAB): {links[self.tab_selection]}")
