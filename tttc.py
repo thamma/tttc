@@ -72,5 +72,6 @@ if commandline.handle():
     exit()
 elif __name__ == '__main__':
     loop = asyncio.get_event_loop()
+    os.environ.setdefault('ESCDELAY', '25')
     with Display(loop) as display:
         loop.run_until_complete(display.main())
