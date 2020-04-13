@@ -167,6 +167,9 @@ class Drawtool():
                 if self.main_view.text_emojis:
                     message_string = emojis.decode(message_string)
                 chat_name = get_display_name(dialog["dialog"].entity)
+                if self.main_view.text_emojis:
+                    chat_name = emojis.decode(chat_name)
+
                 from_string = get_display_name(message.sender)
                 unread = dialog["unread_count"]
                 unread_string = f"({unread} new)" if unread else ""
