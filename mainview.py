@@ -15,6 +15,7 @@ import re
 from tttcutils import debug, show_stacktrace
 import subprocess
 import pyperclip
+from key_handler import KeyHandler
 
 import logging
 logging.basicConfig(filename='/tmp/tttc.log') #, level=logging.DEBUG)
@@ -72,6 +73,8 @@ class MainView():
         self.selected_message = None
 
         self.modestack = ["normal"]
+
+        self.key_handler = KeyHandler(self)
 
     @property
     def mode(self):
@@ -327,14 +330,13 @@ class MainView():
                     if key == "TAB":
                         self.tab_selection = (self.tab_selection + 1) % len(links)
                         self.popup[1] = f"Select link to open (TAB): {links[self.tab_selection]}"
-                        return False
                     elif key == "ESCAPE":
-                        return True
+                        self.modestack.pop()
                     elif key == "RETURN":
                         link = links[self.tab_selection]
                         debug(["xdg-open", f"{httpify(link)}"])
                         subprocess.Popen(["xdg-open", f"{httpify(link)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-                        return True
+                        self.modestack.pop()
                 self.spawn_popup(handler, f"Select link to open (TAB): {links[self.tab_selection]}")
 
     async def show_media(self, num = None):
@@ -348,7 +350,7 @@ class MainView():
         subprocess.Popen(["xdg-open", f"{path}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     def popup_message(self, question):
-        self.modestack.append(self.mode)
+        #self.modestack.append(self.mode)
         self.mode = "popupmessage"
         async def action_handler(self, key):
             return True
@@ -361,243 +363,8 @@ class MainView():
         self.popup = [action_handler, question]
 
     async def handle_key(self, key, redraw = True):
-        # no proper keystrokes
-        if not self.ready:
-            return
-        if key == "RESIZE":
-            await self.drawtool.resize()
-            return
-
-        #  actions that don't consume keystrokes
-        if self.mode == "popupmessage":
-            self.modestack.pop()
-        if self.macro_recording:
-            if key != "q":
-                self.macro_sequence.append(key)
-
-        # now, keystrokes will be consumed
-        if self.mode == "search":
-            if key == "ESCAPE" or key == "RETURN":
-                self.mode = "normal"
-            elif key == "BACKSPACE":
-                if self.search_box == "":
-                    self.mode = "normal"
-                else:
-                    self.search_box = self.search_box[0:-1]
-                    self.search_chats()
-                    self.search_next()
-            else:
-                self.search_box += key
-                self.search_chats()
-                self.search_next()
-        elif self.mode == "vimmode":
-            if key == "ESCAPE":
-                self.mode = "normal"
-            elif key == "RETURN":
-                await self.call_command()
-                self.vimline_box = ""
-                self.mode = "normal"
-            elif key == "BACKSPACE":
-                if self.vimline_box == "":
-                    self.mode = "normal"
-                else:
-                    self.vimline_box = self.vimline_box[0:-1]
-            else:
-                self.vimline_box += key
-        elif self.mode == "normal":
-            num = None
-            try:
-                num = int(key)
-            except:
-                pass
-            if num is not None:
-                self.command_box += str(num)
-                await self.drawtool.redraw()
-                return
-            elif key == ":":
-                self.mode = "vimmode"
-                self.vimline_box = ""
-            elif key == "RETURN" or key == "Y":
-                await self.send_message()
-            elif key == "Q":
-                await self.quit()
-            elif key == "q":
-                if self.macro_recording == None:
-                    # start macro recording
-                    async def record_macro(self, key):
-                        if "a" <= key.lower() <= "z":
-                            self.macro_recording = key
-                            self.modestack.pop() # previously popup
-                            self.popup_message(f"recording into {key}")
-                        else:
-                            self.modestack.pop() # previously popup
-                            self.popup_message(f"Register must be [a-zA-Z]")
-                        return False # dont let the key be handled normally
-
-                    self.spawn_popup(record_macro, "Record into which register?")
-                else:
-                    self.popup_message(f"Macro recorded into {self.macro_recording}")
-                    # end macro recording
-                    self.macros[self.macro_recording] = self.macro_sequence
-                    self.macro_recording = None
-                    self.macro_sequence = []
-            elif key == "@":
-                # execute macro
-                async def ask_macro(self, key):
-                    self.modestack.pop()
-                    if key in self.macros.keys():
-                        macro = self.macros[key]
-                        for k in macro:
-                            await self.handle_key(k, redraw = False)
-                    else:
-                        self.popup_message(f"No such macro @{key}")
-                    return False
-                keys = ", ".join(self.macros.keys())
-                self.spawn_popup(ask_macro, f"Execute which macro?{f'   ({keys} exist)' if keys else ''}")
-            elif key == "UP":
-                self.message_offset += 1
-            elif key == "DOWN":
-                self.message_offset = max(0, self.message_offset - 1)
-            elif key == "C":
-                self.select_prev_chat()
-            elif key == "c":
-                self.select_next_chat()
-            elif key == "E":
-                self.text_emojis ^= True
-            elif key == "R":
-                await self.mark_read()
-            elif key == "d":
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    if n >= len(self.dialogs[self.selected_chat]["messages"]):
-                        #TODO: alert user
-                        self.popup_message("No message by that id.")
-                        await self.drawtool.redraw()
-                        return
-                    async def action_handler(self, key):
-                        if key in ["y","Y"]:
-                            to_delete = self.dialogs[self.selected_chat]["messages"][n]
-                            await to_delete.delete()
-                            self.dialogs[self.selected_chat]["messages"].pop(n)
-                            self.command_box = ""
-                        self.mode = "normal"
-                        return True
-                    question = f"Are you really sure you want to delete message {n}? [y/N]"
-                    self.spawn_popup(action_handler, question)
-
-                    await self.drawtool.redraw()
-            elif key == "e":
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    self.edit_message = self.dialogs[self.selected_chat]["messages"][n]
-                    self.mode = "edit"
-                    self.inputs = emojis.decode(self.edit_message.text)
-                    self.command_box = ""
-            elif key == "y":
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    yank = self.dialogs[self.selected_chat]["messages"][n].text
-                    pyperclip.copy(yank)
-                    self.command_box = ""
-            elif key == "r":
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    reply_to = self.dialogs[self.selected_chat]["messages"][n]
-                    s = emojis.encode(self.inputs)
-                    reply = await reply_to.reply(s)
-                    await self.on_message(reply)
-                    self.command_box = ""
-                    self.inputs = ""
-            elif key in ["L", "l"]:
-                force = (key == "L")
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    self.command_box = ""
-                    await self.download_attachment(n, force)
-            elif key == "o":
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    self.command_box = ""
-                    await self.open_link(n)
-            elif key == "m":
-                if self.command_box:
-                    try:
-                        n = int(self.command_box)
-                    except:
-                        return
-                    self.command_box = ""
-                    await self.show_media(n)
-            elif key == "M":
-                self.center_selected_chat()
-            elif key == "HOME" or key == "g":
-                self.select_chat(0)
-            elif key == "END" or key == "G":
-                self.select_chat(-1)
-            elif key == "i":
-                self.mode = "insert"
-            elif key == "n":
-                self.search_next()
-            elif key == "N":
-                self.search_prev()
-            elif key == "/":
-                self.mode = "search"
-                self.search_box = ""
-            elif key == " ":
-                self.drawtool.show_indices ^= True
-        elif self.mode == "popup":
-            action, _ = self.popup
-            # I think this could break
-            done = await action(self, key)
-            if done:
-                self.modestack.pop()
-                self.popup_input = None
-        elif self.mode == "edit":
-            if key == "ESCAPE":
-                async def ah(self, key):
-                    self.modestack.pop() # leave edit mode
-                    self.modestack.pop() # leave popup mode
-                    if key in ["Y", "y", "RETURN"]:
-                        edit = await self.edit_message.edit(self.inputs)
-                        dialog = self.dialogs[self.selected_chat]
-                        msg_index = next((index for index, message in enumerate(dialog["messages"]) if message.id == edit.id), None)
-                        if msg_index != None:
-                            dialog["messages"][msg_index] = edit
-                        else:
-                            pass # this is not supposed to happen
-                    else:
-                        self.popup_message("Edit discarded.")
-                    self.inputs = ""
-                    return False
-                self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
-            else:
-                self.modify_input(key)
-        elif self.mode == "insert":
-            if key == "ESCAPE":
-                self.mode = "normal"
-            else:
-                self.modify_input(key)
-
-        self.command_box = ""
-        if redraw:
-            await self.drawtool.redraw()
+        await self.key_handler.handle_key(key)
+        await self.drawtool.redraw()
 
     def modify_input(self, key):
             if key == "LEFT":
