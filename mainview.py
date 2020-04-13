@@ -351,7 +351,7 @@ class MainView():
         subprocess.Popen(["xdg-open", f"{path}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
 
     def popup_message(self, question):
-        self.modestack.append(self.mode)
+        #self.modestack.append(self.mode)
         self.mode = "popupmessage"
         async def action_handler(self, key):
             return True
@@ -382,35 +382,6 @@ class MainView():
             if key != "q":
                 self.macro_sequence.append(key)
 
-        # now, keystrokes will be consumed
-        if self.mode == "search":
-            if key == "ESCAPE" or key == "RETURN":
-                self.mode = "normal"
-            elif key == "BACKSPACE":
-                if self.search_box == "":
-                    self.mode = "normal"
-                else:
-                    self.search_box = self.search_box[0:-1]
-                    self.search_chats()
-                    self.search_next()
-            else:
-                self.search_box += key
-                self.search_chats()
-                self.search_next()
-        elif self.mode == "vimmode":
-            if key == "ESCAPE":
-                self.mode = "normal"
-            elif key == "RETURN":
-                await self.call_command()
-                self.vimline_box = ""
-                self.mode = "normal"
-            elif key == "BACKSPACE":
-                if self.vimline_box == "":
-                    self.mode = "normal"
-                else:
-                    self.vimline_box = self.vimline_box[0:-1]
-            else:
-                self.vimline_box += key
         elif self.mode == "normal":
             num = None
             try:
@@ -578,28 +549,13 @@ class MainView():
                 self.popup_input = None
         elif self.mode == "edit":
             if key == "ESCAPE":
-                async def ah(self, key):
-                    self.modestack.pop() # leave edit mode
-                    self.modestack.pop() # leave popup mode
-                    if key in ["Y", "y", "RETURN"]:
-                        edit = await self.edit_message.edit(self.inputs)
-                        dialog = self.dialogs[self.selected_chat]
-                        msg_index = next((index for index, message in enumerate(dialog["messages"]) if message.id == edit.id), None)
-                        if msg_index != None:
-                            dialog["messages"][msg_index] = edit
-                        else:
-                            pass # this is not supposed to happen
-                    else:
-                        self.popup_message("Edit discarded.")
-                    self.inputs = ""
-                    return False
-                self.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
+                pass
             elif key == "BACKSPACE":
-                self.inputs = self.inputs[0:-1]
+                pass
             elif key == "RETURN":
-                self.inputs += "\n"
+                pass
             else:
-                self.inputs += key
+                pass
         elif self.mode == "insert":
             if key == "ESCAPE":
                 self.mode = "normal"
