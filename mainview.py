@@ -15,6 +15,7 @@ import re
 from tttcutils import debug, show_stacktrace
 import subprocess
 import pyperclip
+from key_handler import KeyHandler
 
 import logging
 logging.basicConfig(filename='/tmp/tttc.log') #, level=logging.DEBUG)
@@ -72,6 +73,8 @@ class MainView():
         self.selected_message = None
 
         self.modestack = ["normal"]
+
+        self.key_handler = KeyHandler(self)
 
     @property
     def mode(self):
@@ -361,6 +364,10 @@ class MainView():
         self.popup = [action_handler, question]
 
     async def handle_key(self, key, redraw = True):
+        await self.key_handler.handle_key(key)
+        await self.drawtool.redraw()
+
+    async def handle_key_new(self, key, redraw = True):
         # no proper keystrokes
         if not self.ready:
             return
