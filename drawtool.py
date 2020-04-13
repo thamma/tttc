@@ -47,13 +47,16 @@ class Drawtool():
         await self.redraw()
 
     def _get_input_lines(self, width = 50):
+        #print("lines")
+        #print("inputs:", self.main_view.inputs)
+        #print("cursor:", self.main_view.inputs_cursor)
         # in order to preserve user made linebreaks:
         wrapper = textwrap.TextWrapper()
         wrapper.width = width
         wrapper.replace_whitespace = False
         wrapper.drop_whitespace = False
 
-        lines = self.main_view.split("\n")
+        lines = self.main_view.inputs.split("\n")
         newlines = []
         for line in lines:
             if line:
@@ -64,7 +67,7 @@ class Drawtool():
 
     def _get_cursor_position(self, width = 50):
         lines = self._get_input_lines(width = width)[-self.input_lines:]
-        for i in range(self.main_view.input_cursor):
+        for i in range(self.main_view.inputs_cursor):
             if self.main_view.input[i] == "\n":
                 x = 0
                 y = y + 1
