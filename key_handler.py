@@ -63,7 +63,7 @@ class KeyHandler:
         if self.main_view.search_box == "":
             self.main_view.mode = "normal"
         else:
-            self.main_view.search_box = self.search_box[0:-1]
+            self.main_view.search_box = self.main_view.search_box[0:-1]
             self.main_view.search_chats()
             self.main_view.search_next()
 
