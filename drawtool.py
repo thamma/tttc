@@ -33,7 +33,7 @@ class Drawtool():
         self.min_input_lines = int(0.1 * self.H)
         self.max_input_lines = int(0.3 * self.H)
         try:
-            self.input_lines = min(self.max_input_lines, max(len(self._get_input_lines(self.main_view.inputs, width = self.W - 4)), self.min_input_lines))
+            self.input_lines = min(self.max_input_lines, max(len(self._get_input_lines(width = self.W - 4)), self.min_input_lines))
         except:
             show_stacktrace()
         
@@ -46,14 +46,14 @@ class Drawtool():
         self.recompute_dimensions()
         await self.redraw()
 
-    def _get_input_lines(self, s, width = 50):
+    def _get_input_lines(self, width = 50):
         # in order to preserve user made linebreaks:
         wrapper = textwrap.TextWrapper()
         wrapper.width = width
         wrapper.replace_whitespace = False
         wrapper.drop_whitespace = False
 
-        lines = s.split("\n")
+        lines = self.main_view.split("\n")
         newlines = []
         for line in lines:
             if line:
@@ -61,10 +61,9 @@ class Drawtool():
             else:
                 newlines += [""]
         return newlines
-        #return textwrap.wrap(s, width = width)
 
-    def _get_cursor_position(self, s, width = 50):
-        lines = self._get_input_lines(s, width = width)[-self.input_lines:]
+    def _get_cursor_position(self, width = 50):
+        lines = self._get_input_lines(width = width)[-self.input_lines:]
         for i in range(self.main_view.input_cursor):
             if self.main_view.input[i] == "\n":
                 x = 0
@@ -100,12 +99,12 @@ class Drawtool():
                 self.stdscr.addstr(self.H - 1, 0, mode + suffix)
         self.stdscr.addstr(self.H - 1, int(self.W * 2/3), self.main_view.command_box[:8])
 
-        for index, line in enumerate(self._get_input_lines(self.main_view.inputs, width = self.W - 4)[-self.input_lines:]):
+        for index, line in enumerate(self._get_input_lines(width = self.W - 4)[-self.input_lines:]):
             self.stdscr.addstr(self.H - self.input_lines - 2 + index, 2, f"{line}")
         
         if self.main_view.mode in ["insert", "edit"]:
             curses.curs_set(1)
-            x, y = self._get_cursor_position(self.main_view.inputs, width = self.W - 4)
+            x, y = self._get_cursor_position(width = self.W - 4)
             self.stdscr.move(self.H - self.input_lines - 2 + y, 2 + x)
         elif self.main_view.mode == "search":
             curses.curs_set(1)
