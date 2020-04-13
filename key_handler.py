@@ -135,9 +135,9 @@ class KeyHandler:
 
             self.main_view.spawn_popup(record_macro, "Record into which register?")
         else:
-            self.main_view.popup_message(f"Macro recorded into {self.macro_recording}")
+            self.main_view.popup_message(f"Macro recorded into {self.main_view.macro_recording}")
             # end macro recording
-            self.main_view.macros[self.macro_recording] = self.macro_sequence
+            self.main_view.macros[self.main_view.macro_recording] = self.main_view.macro_sequence
             self.main_view.macro_recording = None
             self.main_view.macro_sequence = []
     
