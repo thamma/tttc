@@ -607,10 +607,16 @@ class MainView():
             elif key == "BACKSPACE":
                 if self.inputs_cursor != 0:
                     self.inputs = self.inputs[:self.inputs_cursor - 1] + self.inputs[self.inputs_cursor:]
+                    self.inputs_cursor -= 1
+            elif key == "DEL":
+                if self.inputs_cursor != len(self.inputs):
+                    self.inputs = self.inputs[:self.inputs_cursor] + self.inputs[self.inputs_cursor + 1:]
             elif key == "RETURN":
                 self.inputs += "\n"
-            else:
+                self.inputs_cursor += 1
+            elif len(key) == 1:
                 self.inputs += key
+                self.inputs_cursor += 1
 
     def insert_move_left(self):
         self.inputs_cursor = max(0, self.inputs_cursor - 1)
