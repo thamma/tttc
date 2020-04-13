@@ -330,14 +330,13 @@ class MainView():
                     if key == "TAB":
                         self.tab_selection = (self.tab_selection + 1) % len(links)
                         self.popup[1] = f"Select link to open (TAB): {links[self.tab_selection]}"
-                        return False
                     elif key == "ESCAPE":
-                        return True
+                        self.modestack.pop()
                     elif key == "RETURN":
                         link = links[self.tab_selection]
                         debug(["xdg-open", f"{httpify(link)}"])
                         subprocess.Popen(["xdg-open", f"{httpify(link)}"], stdout = subprocess.DEVNULL, stderr = subprocess.DEVNULL)
-                        return True
+                        self.modestack.pop()
                 self.spawn_popup(handler, f"Select link to open (TAB): {links[self.tab_selection]}")
 
     async def show_media(self, num = None):

@@ -21,7 +21,8 @@ class KeyHandler:
         if not self.main_view.ready:
             return
         if key == "RESIZE":
-            self.main_view.drawtool.resize()
+            # await self.main_view.drawtool.resize()
+            # drawtool crashes after resizing to smaller dimension
             return
         if self.main_view.mode == "popupmessage":
             self.main_view.modestack.pop()
@@ -161,7 +162,7 @@ class KeyHandler:
     
     @handle("normal", "DOWN")
     async def _handle_key(self, key):
-        self.main_view.message_offset = max(0, self.message_offset - 1)
+        self.main_view.message_offset = max(0, self.main_view.message_offset - 1)
     
     @handle("normal", "E")
     async def _handle_key(self, key):
@@ -220,6 +221,7 @@ class KeyHandler:
     @handle("normal", "r")
     async def _handle_key(self, key):
         if not self.main_view.inputs:
+            self.main_view.command_box = ""
             return
         if self.main_view.command_box:
             try:
