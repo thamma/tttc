@@ -4,7 +4,7 @@ import resources
 import curses
 from tttcutils import debug, show_stacktrace
 
-def bla(scr):
+def draw_logo(scr):
     lines = resources.tttc_logo
     tttw,ttth = len(lines[4]), len(lines)
     w, h = curses.COLS, curses.LINES
@@ -41,7 +41,7 @@ class AuthView():
         await self.client.connect()
         self.stdscr.addstr("connected")
         self.auth = await self.client.is_user_authorized()
-        bla(self.stdscr)
+        draw_logo(self.stdscr)
         if not self.auth:
             while True:
                 self.stdscr.addstr("Please enter your phone number: ")
@@ -50,15 +50,17 @@ class AuthView():
                 self.phone = self.phone.replace("+","00").replace(" ","")
                 try:
                     response = await self.client.sign_in(phone = self.phone)
+                    debug(str(response))
                     break
                 except telethon.errors.rpcerrorlist.FloodWaitError as err:
                     self.stdscr.addstr(f"The telegram servers blocked you for too many retries ({err.seconds}s remaining). ")
                     self.stdscr.refresh()
-                except telethon.errors.rcperrorlist.PhoneNumberInvalidError as e:
+                except telethon.errors.rpcerrorlist.PhoneNumberInvalidError as err:
                     self.stdscr.addstr("Incorrect phone number. ")
                     self.stdscr.refresh()
-                except Exception as e:
-                    self.stdscr.addstr(f"Uncaught Error: {e}")
+                except Exception as err:
+                    debug(f"Uncaught Error: {err}")
+                    self.stdscr.addstr(f"Uncaught Error: {err}")
                     self.stdscr.refresh()
             self.stdscr.addstr("Now authentificate with the code telegram sent to you.")
             self.stdscr.refresh()
@@ -66,7 +68,8 @@ class AuthView():
                 done = False
                 try:
                     self.code = await self.textinput()
-                    x = await self.client.sign_in(code = self.code)
+                    await self.client.sign_in(code = self.code)
+                    done = True
                 except telethon.errors.rpcerrorlist.PhoneCodeInvalidError:
                     self.stdscr.addstr("The authentification code was wrong. Please try again.")
                     self.stdscr.refresh()
@@ -83,8 +86,10 @@ class AuthView():
                         except telethon.errors.PasswordHashInvalidError:
                             self.stdscr.addstr("Incorrect password. Try again.")
                             self.stdscr.refresh()
-                except Exception as e:
-                    pass
+                except Exception as err:
+                    debug(f"Uncaught Error: {err}")
+                    self.stdscr.addstr(f"Uncaught Error: {err}")
+                    self.stdscr.refresh()
                 if done:
                     break
         self.stdscr.addstr("Authentification successfull. Please wait until the client has finished loading.")
@@ -98,10 +103,11 @@ class AuthView():
             self.inputs = self.inputs[0:-1]
         else:
             self.inputs += key
+        y, _ = self.stdscr.getyx()
         if self.showinput:
-            self.stdscr.addstr(20, 50, self.inputs)
+            self.stdscr.addstr(y, 2, self.inputs)
         else:
-            self.stdscr.addstr(20, 50, "*"*len(self.inputs))
+            self.stdscr.addstr(y, 2, "*"*len(self.inputs))
         self.stdscr.clrtoeol()
         self.stdscr.refresh()
 

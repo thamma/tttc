@@ -37,7 +37,6 @@ class KeyHandler:
             await self.handles[(self.main_view.mode, True)](self, key)
         else:
             self.command_box = ""
-        await self.main_view.drawtool.redraw()
 
     def handle(mode, key = []):
         def deco(f):
@@ -326,41 +325,17 @@ class KeyHandler:
             return False
         self.main_view.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
 
-    @handle("edit", "BACKSPACE")
-    async def _handle_key(self, key):
-        self.main_view.inputs = self.main_view.inputs[0:-1]
-
-    @handle("edit", "RETURN")
-    async def _handle_key(self, key):
-        self.main_view.inputs += "\n"
-
     @handle("edit", True)
     async def _handle_key(self, key):
-        self.main_view.inputs += key
+        self.main_view.modify_input(key)
 
     @handle("insert", "ESCAPE")
     async def _handle_key(self, key):
         self.main_view.mode = "normal"
 
-    @handle("insert", "LEFT")
-    async def _handle_key(self, key):
-        self.main_view.insert_move_left()
-
-    @handle("insert", "RIGHT")
-    async def _handle_key(self, key):
-        self.main_view.insert_move_right()
-
-    @handle("insert", "BACKSPACE")
-    async def _handle_key(self, key):
-        self.main_view.inputs = self.main_view.inputs[0:-1]
-
-    @handle("insert", "RETURN")
-    async def _handle_key(self, key):
-        self.main_view.inputs += "\n"
-
     @handle("insert", True)
     async def _handle_key(self, key):
-        self.main_view.inputs += key
+        self.main_view.modify_input(key)
 
     @handle("insert", "NUM_RETURN")
     async def _handle_key(self, key):
