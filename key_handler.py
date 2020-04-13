@@ -2,6 +2,8 @@ from functools import wraps
 from tttcutils import debug
 import emojis
 
+import pyperclip
+
 # Im am very dissatisfied with using a global variable here
 handlers = {}
 
@@ -186,7 +188,7 @@ class KeyHandler:
                     main_view.command_box = ""
                 main_view.modestack.pop()
                 main_view.popup_input = None
-            question = f"Are you really sure you want to delete message {n}? [y/N]"
+            question = f"Are you sure you want to delete message {n}? [y/N]"
             self.main_view.spawn_popup(action_handler, question)
 
     
@@ -210,19 +212,21 @@ class KeyHandler:
                 n = int(self.main_view.command_box)
             except:
                 return
-            yank = self.main_view.dialogs[self.selected_chat]["messages"][n].text
+            yank = self.main_view.dialogs[self.main_view.selected_chat]["messages"][n].text
             pyperclip.copy(yank)
             self.main_view.command_box = ""
     
     
     @handle("normal", "r")
     async def _handle_key(self, key):
+        if not self.main_view.inputs:
+            return
         if self.main_view.command_box:
             try:
                 n = int(self.main_view.command_box)
             except:
                 return
-            reply_to = self.main_view.dialogs[self.selected_chat]["messages"][n]
+            reply_to = self.main_view.dialogs[self.main_view.selected_chat]["messages"][n]
             s = emojis.encode(self.main_view.inputs)
             reply = await reply_to.reply(s)
             await self.main_view.on_message(reply)
