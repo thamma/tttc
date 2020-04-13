@@ -73,7 +73,7 @@ class Drawtool():
             else:
                 x += 1
             if x > len(lines[y]):
-                x = 0
+                x = 1
                 y += 1
         return x, y
 
