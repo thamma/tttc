@@ -56,12 +56,12 @@ class KeyHandler:
 
     @handle("search", ["ESCAPE", "RETURN"])
     async def _handle_key(self, key):
-        self.main_view.mode = "normal"
+        self.main_view.modestack.pop()
 
     @handle("search", "BACKSPACE")
     async def _handle_key(self, key):
         if self.main_view.search_box == "":
-            self.main_view.mode = "normal"
+            self.main_view.modestack.pop()
         else:
             self.main_view.search_box = self.main_view.search_box[0:-1]
             self.main_view.search_chats()
@@ -75,18 +75,18 @@ class KeyHandler:
 
     @handle("vimmode", "ESCAPE")
     async def _handle_key(self, key):
-        self.main_view.mode = "normal"
+        self.main_view.modestack.pop()
 
     @handle("vimmode", "RETURN")
     async def _handle_key(self, key):
         await self.main_view.call_command()
         self.main_view.vimline_box = ""
-        self.main_view.mode = "normal"
+        self.main_view.modestack.pop()
 
     @handle("vimmode", "BACKSPACE")
     async def _handle_key(self, key):
         if self.main_view.vimline_box == "":
-            self.main_view.mode = "normal"
+            self.main_view.modestack.pop()
         else:
             self.main_view.vimline_box = self.vimline_box[0:-1]
 
@@ -300,6 +300,10 @@ class KeyHandler:
     async def _handle_key(self, key):
         self.main_view.drawtool.show_indices ^= True
 
+    @handle("normal", "ESCAPE")
+    async def _handle_key(self, key):
+        self.main_view.command_box = ""
+
     @handle("popup", True)
     async def _handle_key(self, key):
         action, _ = self.main_view.popup
@@ -331,7 +335,7 @@ class KeyHandler:
 
     @handle("insert", "ESCAPE")
     async def _handle_key(self, key):
-        self.main_view.mode = "normal"
+        self.main_view.modestack.pop()
 
     @handle("insert", True)
     async def _handle_key(self, key):
@@ -341,3 +345,86 @@ class KeyHandler:
     async def _handle_key(self, key):
         self.main_view.modestack.pop()
         await self.main_view.send_message()
+
+    @handle("normal", "f")
+    async def _handle_key(self, key):
+        self.main_view.mode = "fw messages"
+        self.main_view.forward_messages = []
+
+    @handle("fw messages", "ESCAPE")
+    async def _handle_key(self, key):
+        if self.main_view.command_box:
+            self.main_view.command_box = ""
+            return
+        if not self.main_view.forward_messages:
+            self.main_view.modestack.pop() # exit forward mode
+            self.main_view.forward_messages = []
+            self.main_view.command_box = ""
+        else:
+            async def ah(self, key):
+                self.modestack.pop() # leave popup
+                if key in ["Y", "y"]:
+                    self.modestack.pop() # exit forward mode
+                    self.forward_messages = []
+                    self.command_box = ""
+                else:
+                    pass
+            self.main_view.spawn_popup(ah, "Do you want to quit forwarding messages? [y/N]")
+
+    @handle("fw messages", "RETURN")
+    async def _handle_key(self, key):
+        num = None
+        try:
+            num = int(self.main_view.command_box)
+            if num >= len(self.main_view.dialogs[self.main_view.selected_chat]["messages"]):
+                self.main_view.command_box = ""
+                return
+            else:
+                message = self.main_view.dialogs[self.main_view.selected_chat]["messages"][num]
+                self.main_view.forward_messages.append(message)
+                self.main_view.command_box = ""
+        except:
+            pass
+    
+    @handle("fw messages", "f")
+    async def _handle_key(self, key):
+        if self.main_view.forward_messages:
+            self.main_view.modestack.pop()
+            self.main_view.mode = "fw chats"
+        else:
+            self.main_view.modestack.pop()
+            self.main_view.popup_message("No messages to be forwarded. Aborting.")
+
+    @handle("fw messages", True)
+    async def _handle_key(self, key):
+        num = None
+        try:
+            num = int(key)
+            if num is not None:
+                self.main_view.command_box += str(num)
+        except:
+            pass
+
+    @handle("fw chats", "c")
+    async def _handle_key(self, key):
+        self.main_view.select_next_chat()
+
+    @handle("fw chats", "C")
+    async def _handle_key(self, key):
+        self.main_view.select_prev_chat()
+
+    
+    @handle("fw chats", "RETURN")
+    async def _handle_key(self, key):
+        dialog = self.main_view.dialogs[self.main_view.selected_chat]["dialog"]
+        messages = self.main_view.forward_messages
+        await self.main_view.client.forward_messages(dialog, messages)
+        await self.main_view.on_forward(len(messages))
+        self.main_view.modestack.pop()
+        self.main_view.forward_messages = []
+    
+    @handle("fw chats", "/")
+    async def _handle_key(self, key):
+        self.main_view.mode = "search"
+        self.main_view.search_box = ""
+

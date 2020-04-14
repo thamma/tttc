@@ -46,14 +46,17 @@ class Drawtool():
         self.recompute_dimensions()
         await self.redraw()
 
-    def _get_input_lines(self, width = 50):
+    def _get_input_lines(self, width = 50, inputs = None):
+        if inputs == None:
+            inputs = self.main_view.inputs
         # in order to preserve user made linebreaks:
         wrapper = textwrap.TextWrapper()
         wrapper.width = width
         wrapper.replace_whitespace = False
         wrapper.drop_whitespace = False
 
-        lines = self.main_view.inputs.split("\n")
+        #lines = self.main_view.inputs.split("\n")
+        lines = inputs.split("\n")
         newlines = []
         for line in lines:
             if line:
@@ -101,8 +104,28 @@ class Drawtool():
                 self.stdscr.addstr(self.H - 1, 0, mode + suffix)
         self.stdscr.addstr(self.H - 1, int(self.W * 2/3), self.main_view.command_box[:8])
 
-        for index, line in enumerate(self._get_input_lines(width = self.W - 4)[-self.input_lines:]):
-            self.stdscr.addstr(self.H - self.input_lines - 2 + index, 2, f"{line}")
+        # draw inputs if any mode but forwarding
+        if self.main_view.mode.startswith("fw"): # list messages being forwarded
+            fwtext = []
+            for message in self.main_view.forward_messages:
+
+                msgtext = ""
+                if message.text:
+                    msgtext = message.text if len(message.text) < 20 else f"{message.text[0:18]}..."
+
+                mediatext = ""
+                if message.media:
+                    mediatext, _ = self.get_media_type(message)
+
+                displaytext = f"[ {msgtext}{' ' if msgtext and mediatext else ''}({mediatext}) ]"
+
+                fwtext.append(displaytext)
+            fwtext = "    ".join(fwtext)
+            for index, line in enumerate(self._get_input_lines(width = self.W - 4, inputs=fwtext)[-self.input_lines:]):
+                self.stdscr.addstr(self.H - self.input_lines - 2 + index, 2, f"{line}")
+        else: # draw inputs as usual
+            for index, line in enumerate(self._get_input_lines(width = self.W - 4)[-self.input_lines:]):
+                self.stdscr.addstr(self.H - self.input_lines - 2 + index, 2, f"{line}")
         
         if self.main_view.mode in ["insert", "edit"]:
             curses.curs_set(1)
@@ -267,6 +290,30 @@ class Drawtool():
                 self.stdscr.addstr(y_off, maxwidth // 2 - len(display_text) // 2, display_text, attributes)
 
 
+    def get_media_type(self, message):
+        main_view = self.main_view
+        if message.media:
+            media_type = message.media.to_dict()["_"]
+            if media_type == "MessageMediaPhoto":
+                media_type = "Photo"
+            elif media_type == "MessageMediaDocument":
+                atts = message.media.document.attributes
+                filename = [ x for x in atts if x.to_dict()["_"] == "DocumentAttributeFilename" ]
+                sticker = [ x for x in atts if x.to_dict()["_"] == "DocumentAttributeSticker" ]
+                if sticker:
+                    stickertext = sticker[0].alt
+                    if main_view.text_emojis:
+                        stickertext = emojis.decode(stickertext)
+                    media_type = f"{stickertext}  Sticker"
+                elif filename:
+                    filename = filename[0].to_dict()["file_name"]
+                    media_type = f"Document ({filename})"
+                else:
+                    media_type = f"Document ({message.media.document.mime_type})"
+            downloaded = " (saved)" if (message.id in main_view.dialogs[main_view.selected_chat]["downloads"]) else ""
+            return (media_type, downloaded)
+        return (None, None)
+
 
 
     def draw_message(self, main_view, chat_idx):
@@ -288,25 +335,9 @@ class Drawtool():
                             for i in range(int(math.ceil(len(message_line)/maxtextwidth)))
                             ]
         if message.media:
-            media_type = message.media.to_dict()["_"]
-            if media_type == "MessageMediaPhoto":
-                media_type = "Photo"
-            elif media_type == "MessageMediaDocument":
-                atts = message.media.document.attributes
-                filename = [ x for x in atts if x.to_dict()["_"] == "DocumentAttributeFilename" ]
-                sticker = [ x for x in atts if x.to_dict()["_"] == "DocumentAttributeSticker" ]
-                if sticker:
-                    stickertext = sticker[0].alt
-                    if main_view.text_emojis:
-                        stickertext = emojis.decode(stickertext)
-                    media_type = f"{stickertext}  Sticker"
-                elif filename:
-                    filename = filename[0].to_dict()["file_name"]
-                    media_type = f"Document ({filename})"
-                else:
-                    media_type = f"Document ({message.media.document.mime_type})"
-            downloaded = " (saved)" if (message.id in main_view.dialogs[main_view.selected_chat]["downloads"]) else ""
+            media_type, downloaded = self.get_media_type(message)
             lines += [ f"[{media_type}]{downloaded}" ]
+
 
         reply = ""
         if message.is_reply:

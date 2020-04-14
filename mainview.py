@@ -76,6 +76,8 @@ class MainView():
 
         self.key_handler = KeyHandler(self)
 
+        self.forward_messages = []
+
     @property
     def mode(self):
         try:
@@ -110,6 +112,15 @@ class MainView():
                         dialog["online"] = False
                 if dialog["dialog"].entity.id == user_id:
                     dialog["online"] = event.online
+
+    async def on_forward(self, n):
+        front = self.dialogs.pop(self.selected_chat)
+        self.dialogs = [front] + self.dialogs
+        self.selected_chat = 0
+        dialog = self.dialogs[0]
+        newmessages = await self.client.get_messages(dialog["dialog"], n)
+        for message in newmessages[::-1]:
+            dialog["messages"].insert(0, message)
 
     async def on_message(self, event):
         # move chats with news up
