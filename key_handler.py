@@ -21,8 +21,7 @@ class KeyHandler:
         if not self.main_view.ready:
             return
         if key == "RESIZE":
-            # await self.main_view.drawtool.resize()
-            # drawtool crashes after resizing to smaller dimension
+            await self.main_view.drawtool.resize()
             return
         if self.main_view.mode == "popupmessage":
             self.main_view.modestack.pop()
