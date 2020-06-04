@@ -21,8 +21,7 @@ class KeyHandler:
         if not self.main_view.ready:
             return
         if key == "RESIZE":
-            # await self.main_view.drawtool.resize()
-            # drawtool crashes after resizing to smaller dimension
+            await self.main_view.drawtool.resize()
             return
         if self.main_view.mode == "popupmessage":
             self.main_view.modestack.pop()
@@ -349,7 +348,16 @@ class KeyHandler:
     @handle("normal", "f")
     async def _handle_key(self, key):
         self.main_view.mode = "fw messages"
-        self.main_view.forward_messages = []
+        fw_messages = []
+        try:
+            num = int(self.main_view.command_box)
+            if num < len(self.main_view.dialogs[self.main_view.selected_chat]["messages"]):
+                message = self.main_view.dialogs[self.main_view.selected_chat]["messages"][num]
+                fw_messages.append(message)
+        except:
+            pass
+        self.main_view.command_box = ""
+        self.main_view.forward_messages += fw_messages
 
     @handle("fw messages", "ESCAPE")
     async def _handle_key(self, key):

@@ -263,6 +263,7 @@ class MainView():
         await self.mark_read()
         self.center_selected_chat()
         self.inputs = ""
+        self.inputs_cursor = 0
 
     async def mark_read(self):
         chat = self.dialogs[self.selected_chat]
@@ -393,8 +394,11 @@ class MainView():
                 self.inputs += "\n"
                 self.inputs_cursor += 1
             elif len(key) == 1:
-                self.inputs += key
+                input_string = list(self.inputs)
+                input_string.insert(self.inputs_cursor, key)
+                self.inputs = "".join(input_string)
                 self.inputs_cursor += 1
+                #self.inputs.insert(self.inputs_cursor, key)
 
     def insert_move_left(self):
         self.inputs_cursor = max(0, self.inputs_cursor - 1)

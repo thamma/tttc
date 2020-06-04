@@ -67,6 +67,7 @@ class Drawtool():
 
     def _get_cursor_position(self, width = 50):
         lines = self._get_input_lines(width = width)[-self.input_lines:]
+        debug(lines)
         x = 0
         y = 0
         for i in range(self.main_view.inputs_cursor):
