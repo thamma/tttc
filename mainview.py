@@ -79,6 +79,14 @@ class MainView():
         self.forward_messages = []
 
     @property
+    def dialogs(self):
+        return self._dialogs
+
+    @dialogs.setter
+    def dialogs(self, newdialogs):
+        self._dialogs = newdialogs
+
+    @property
     def mode(self):
         try:
             return self.modestack[-1]

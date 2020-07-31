@@ -189,8 +189,13 @@ class Drawtool():
             self.draw_frame(0,0, self.chats_height , self.chats_width)
             index = 0
             y = 1
-            for index in range(self.chats_num):
+            chats_to_draw = self.chats_num
+            while index < chats_to_draw:
                 dialog = self.main_view.dialogs[index + offset]
+                if dialog["dialog"].archived:
+                    index += 1
+                    chats_to_draw += 1
+                    continue
                 message = dialog["messages"][0] if len(dialog["messages"]) > 0 else dialog["dialog"].message
                 message_string = message.text if message.text else "[Non-text object]"
                 if self.main_view.text_emojis:
