@@ -232,7 +232,7 @@ class KeyHandler:
             await self.main_view.on_message(reply)
             self.main_view.command_box = ""
             self.main_view.inputs = ""
-    
+            self.main_view.inputs_cursor = 0
     
     @handle("normal", ["l", "L"])
     async def _handle_key(self, key):
@@ -379,7 +379,7 @@ class KeyHandler:
                     pass
             self.main_view.spawn_popup(ah, "Do you want to quit forwarding messages? [y/N]")
 
-    @handle("fw messages", "RETURN")
+    @handle("fw messages", "f")
     async def _handle_key(self, key):
         num = None
         try:
@@ -394,7 +394,7 @@ class KeyHandler:
         except:
             pass
     
-    @handle("fw messages", "f")
+    @handle("fw messages", "RETURN")
     async def _handle_key(self, key):
         if self.main_view.forward_messages:
             self.main_view.modestack.pop()
