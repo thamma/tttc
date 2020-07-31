@@ -17,6 +17,9 @@ import subprocess
 import pyperclip
 from key_handler import KeyHandler
 
+from telethon.tl.functions.messages import ToggleDialogPinRequest
+
+
 import logging
 logging.basicConfig(filename='/tmp/tttc.log') #, level=logging.DEBUG)
 
@@ -63,15 +66,16 @@ class MainView():
         self.search_box = ""
         self.vimline_box = ""
         self.command_box = ""
-        self.dialogs = []
+
+        self._dialogs = []
+        self._dialogs_updated = False
+        self.num_pinned = 0
 
         # index corresponds to the index in self.dialogs
         self.selected_chat = 0
         # index offset
         self.selected_chat_offset = 0
             
-        self.selected_message = None
-
         self.modestack = ["normal"]
 
         self.key_handler = KeyHandler(self)
@@ -80,10 +84,18 @@ class MainView():
 
     @property
     def dialogs(self):
+        if not self._dialogs_updated:
+            return self._dialogs
+        # filter archived
+        self._dialogs = [ dialog for dialog in self._dialogs if not dialog["dialog"].archived ]
+        # sort pinned to top
+        self._dialogs.sort(key = lambda x: not x["dialog"].pinned)
+        self.num_pinned = sum( 1 for dialog in self._dialogs if dialog["dialog"].pinned )
         return self._dialogs
 
     @dialogs.setter
     def dialogs(self, newdialogs):
+        self._dialogs_updated = True
         self._dialogs = newdialogs
 
     @property
@@ -129,6 +141,13 @@ class MainView():
         newmessages = await self.client.get_messages(dialog["dialog"], n)
         for message in newmessages[::-1]:
             dialog["messages"].insert(0, message)
+
+    async def toggle_pin(self):
+        dialog = self.dialogs[self.selected_chat]["dialog"]
+        dialog.pinned = not dialog.pinned
+        debug(f"{dialog.name} is {dialog.pinned=}")
+        out = await self.client(ToggleDialogPinRequest(dialog.input_entity, dialog.pinned))
+        debug(f"{out=}")
 
     async def on_message(self, event):
         # move chats with news up

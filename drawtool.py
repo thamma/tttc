@@ -37,7 +37,7 @@ class Drawtool():
         except:
             show_stacktrace()
         
-        self.chats_height = self.H - self.input_lines - 3
+        self.chats_height = self.H - self.input_lines - 3 - 2 # -2 : pinned chats divider
         self.chats_width = int(self.W * self.chat_ratio)
         self.chats_num = self.chats_height // 3        
 
@@ -191,6 +191,13 @@ class Drawtool():
             y = 1
             chats_to_draw = self.chats_num
             while index < chats_to_draw:
+                if index != 0 and index == self.main_view.num_pinned:
+                    self.draw_text(
+                            [
+                            self.format("─" * (self.chats_width//2 - 1),  alignment = "center"),
+                            ],
+                        y, 1, maxwidth = self.chats_width - 2)
+                    y += 2
                 dialog = self.main_view.dialogs[index + offset]
                 if dialog["dialog"].archived:
                     index += 1
@@ -388,7 +395,7 @@ class Drawtool():
 
         await self.load_messages(main_view.selected_chat, main_view.message_offset + 50)
         messages = main_view.dialogs[main_view.selected_chat]["messages"]
-        max_rows = self.H - self.input_lines - 3 - 1
+        max_rows = self.H - self.input_lines - 3 - 1 - 2
         lines = []
         chat_count = 0
         while len(lines) < max_rows + offset and chat_count < len(messages):

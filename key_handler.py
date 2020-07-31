@@ -266,6 +266,11 @@ class KeyHandler:
             self.main_view.command_box = ""
             await self.main_view.show_media(n)
 
+    @handle("normal", "P")
+    async def _handle_key(self, key):
+        debug("called")
+        await self.main_view.toggle_pin()
+
     @handle("normal", "M")
     async def _handle_key(self, key):
         self.main_view.center_selected_chat()
