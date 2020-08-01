@@ -90,14 +90,21 @@ class MainView():
         return self._dialogs
 
     def _update_dialogs(self):
-        # filter archived
+        # remove updated flag
+        self._dialogs_updated = False
+        # store old selected chat and restore it after sorting
+        selected_chat = self._dialogs[self.selected_chat]
+        # remove archived chats -- they're archived for a reason
         self._dialogs = [ dialog for dialog in self._dialogs if not dialog["dialog"].archived ]
-        # sort pinned to top
+        # sort pinned to top: inverse(lexicographic(is pinned, date))
         self._dialogs.sort(key = lambda x: (x["dialog"].pinned, x["dialog"].date))
         self._dialogs = self._dialogs[::-1]
         self.num_pinned = sum( 1 for dialog in self._dialogs if dialog["dialog"].pinned )
-        self._dialogs_updated = False
-
+        # restore selected chat
+        for idx, dialog in enumerate(self._dialogs):
+            if dialog == selected_chat:
+                self.selected_chat = idx
+                break
 
     @dialogs.setter
     def dialogs(self, newdialogs):
@@ -160,29 +167,21 @@ class MainView():
                 break
         self.select_chat(newpos)
 
-
-
-
     async def on_message(self, event):
-        # move chats with news up
         for idx, dialog in enumerate(self.dialogs):
             if dialog["dialog"].id == event.chat_id:
-                # stuff to do upon arriving messages
-                newmessage = await self.client.get_messages(dialog["dialog"], 1)
-                dialog["messages"].insert(0, newmessage[0])
+                newmessage = (await self.client.get_messages(dialog["dialog"], 1))[0]
+                # add new message to list of messages
+                dialog["messages"].insert(0, newmessage)
+                # update date of dialog to sort it up
+                dialog["dialog"].date = newmessage.date
+                # send notification, update unread count
                 if not event.out:
                     dialog["unread_count"] += 1
                     os.system(f"notify-send -i apps/telegram \"{dialog['dialog'].name}\" \"{newmessage[0].message}\"")
-                front = self.dialogs.pop(idx)
-                self.dialogs = [front] + self.dialogs
                 break
-        # dont switch the dialoge upon arriving messages
-        if idx == self.selected_chat:
-            self.selected_chat = 0
-        elif idx > self.selected_chat:
-            self.selected_chat += 1
-        elif idx < self.selected_chat:
-            pass
+        # restore order
+        self._update_dialogs()
         await self.drawtool.redraw()
 
     async def run(self):
