@@ -191,7 +191,8 @@ class Drawtool():
             y = 1
             chats_to_draw = self.chats_num
             while index < chats_to_draw:
-                if index != 0 and index == self.main_view.num_pinned:
+                # only draw if messages are pinned and pins are viewable (at top)
+                if index != 0 and index == self.main_view.num_pinned - offset:
                     self.draw_text(
                             [
                             self.format("─" * (self.chats_width//2 - 1),  alignment = "center"),

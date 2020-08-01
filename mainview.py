@@ -86,12 +86,18 @@ class MainView():
     def dialogs(self):
         if not self._dialogs_updated:
             return self._dialogs
+        self._update_dialogs()
+        return self._dialogs
+
+    def _update_dialogs(self):
         # filter archived
         self._dialogs = [ dialog for dialog in self._dialogs if not dialog["dialog"].archived ]
         # sort pinned to top
-        self._dialogs.sort(key = lambda x: not x["dialog"].pinned)
+        self._dialogs.sort(key = lambda x: (x["dialog"].pinned, x["dialog"].date))
+        self._dialogs = self._dialogs[::-1]
         self.num_pinned = sum( 1 for dialog in self._dialogs if dialog["dialog"].pinned )
-        return self._dialogs
+        self._dialogs_updated = False
+
 
     @dialogs.setter
     def dialogs(self, newdialogs):
@@ -145,9 +151,17 @@ class MainView():
     async def toggle_pin(self):
         dialog = self.dialogs[self.selected_chat]["dialog"]
         dialog.pinned = not dialog.pinned
-        debug(f"{dialog.name} is {dialog.pinned=}")
         out = await self.client(ToggleDialogPinRequest(dialog.input_entity, dialog.pinned))
-        debug(f"{out=}")
+        self._update_dialogs()
+        newpos = 0
+        for i in range(len(self.dialogs)):
+            if self.dialogs[i]["dialog"] == dialog:
+                newpos = i
+                break
+        self.select_chat(newpos)
+
+
+
 
     async def on_message(self, event):
         # move chats with news up
