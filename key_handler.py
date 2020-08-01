@@ -201,6 +201,7 @@ class KeyHandler:
             self.main_view.edit_message = self.main_view.dialogs[self.main_view.selected_chat]["messages"][n]
             self.main_view.mode = "edit"
             self.main_view.inputs = emojis.decode(self.main_view.edit_message.text)
+            self.main_view.inputs_cursor = len(self.main_view.inputs)
             self.main_view.command_box = ""
     
     
@@ -330,6 +331,7 @@ class KeyHandler:
             else:
                 self.popup_message("Edit discarded.")
             self.inputs = ""
+            self.inputs_cursor = 0
             return False
         self.main_view.spawn_popup(ah, "Do you want to save the edit? [Y/n]")
 
