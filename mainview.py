@@ -201,6 +201,8 @@ class MainView():
                     "messages": []
                 #    "last_seen": dialog.entity.status.to_dict()["was_online"] if online == False  else None,
                 } for dialog in chats ]
+        self._update_dialogs()
+        self.selected_chat = 0
         await self.drawtool.redraw()
         self.ready = True
 
