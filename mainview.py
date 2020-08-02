@@ -147,13 +147,11 @@ class MainView():
                     dialog["online"] = event.online
 
     async def on_forward(self, n):
-        front = self.dialogs.pop(self.selected_chat)
-        self.dialogs = [front] + self.dialogs
-        self.selected_chat = 0
-        dialog = self.dialogs[0]
+        dialog = self.dialogs[self.selected_chat]
         newmessages = await self.client.get_messages(dialog["dialog"], n)
         for message in newmessages[::-1]:
             dialog["messages"].insert(0, message)
+        dialog["dialog"].date = message.date
 
     async def toggle_pin(self):
         dialog = self.dialogs[self.selected_chat]["dialog"]
