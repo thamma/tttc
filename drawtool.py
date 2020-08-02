@@ -25,7 +25,7 @@ class Drawtool():
     
         self.chat_rows = 5
         self.chat_offset_fraction = 0.3
-        self.single_chat_fraction = 0.3
+        self.single_chat_fraction = 0.4
         self.dialog_fraction = 0.25
         self.show_indices = False
 
@@ -186,7 +186,7 @@ class Drawtool():
         selected_chat_index = self.main_view.selected_chat - self.main_view.selected_chat_offset
         offset = self.main_view.selected_chat_offset
         try:
-            self.draw_frame(0,0, self.chats_height , self.chats_width)
+            self.draw_frame(0,0, self.chats_height + 1, self.chats_width)
             index = 0
             y = 1
             chats_to_draw = self.chats_num
@@ -220,7 +220,6 @@ class Drawtool():
                 date_string = self._datestring(date)
                 pinned = "* " if dialog["dialog"].pinned else "  "
                 selected = selected_chat_index == index
-
                 self.draw_text(
                         [
                         self.format("o" if dialog["online"] else " ", attributes = self.main_view.colors["secondary"]),
@@ -230,10 +229,11 @@ class Drawtool():
                         self.format(date_string, alignment = "right", attributes = self.main_view.colors["primary"]),
                         ],
                     y, 2, maxwidth = self.chats_width - 2)
+                debug(f"{self.chats_width=}")
                 self.draw_text(
                         [
-                        self.format(f"{from_string}:"),
-                        self.format(message_string, width = self.chats_width - len(f"{from_string}: ") - 3)
+                        self.format(f"{from_string}:", width = min(self.chats_width // 2, len(from_string) + 1)),
+                        self.format(message_string, width = self.chats_width - min(self.chats_width // 2, len(f"{from_string}: ") + 1) - 3)
                         ],
                     y + 1, 2, maxwidth = self.chats_width - 2)
                 y += 3
@@ -260,7 +260,9 @@ class Drawtool():
             inner_alignment = format_dict["inner_alignment"]
             truncation = format_dict["truncation"]
             # TODO: make this split preferrably at spaces and not show linebreaks
-            display_text = text.split("\n")[0]
+            display_text = text.replace("\n", " ")
+            #" ".join(text)#.split("\n")[0]
+            debug(f"{text=}\n\t{width=}\n\t{display_text=}")
             if len(display_text) > width:
                 if truncation:
                     # TODO: make this split preferrably at spaces and not show linebreaks
@@ -349,7 +351,11 @@ class Drawtool():
                             ]
         if message.media:
             media_type, downloaded = self.get_media_type(message)
-            lines += [ f"[{media_type}]{downloaded}" ]
+            media_line = f"[{media_type}]{downloaded}"
+            lines += [
+                    media_line[maxtextwidth * i: maxtextwidth*i+maxtextwidth]
+                    for i in range(int(math.ceil(len(media_line)/maxtextwidth)))
+                    ]
 
 
         reply = ""
@@ -413,7 +419,7 @@ class Drawtool():
                 lines.append(("", "hlred"))
 
         # draw frame now, so we can draw |- bow drawing characters
-        self.draw_frame(0, self.chats_width + 1, self.chats_height, self.W - self.chats_width - 2)
+        self.draw_frame(0, self.chats_width + 1, self.chats_height + 1, self.W - self.chats_width - 2)
 
         for i in range(min(len(lines)-offset, max_rows)):
             text, message = lines[i + offset]
