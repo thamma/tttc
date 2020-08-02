@@ -25,7 +25,7 @@ class Drawtool():
     
         self.chat_rows = 5
         self.chat_offset_fraction = 0.3
-        self.single_chat_fraction = 0.4
+        self.single_chat_fraction = 0.3
         self.dialog_fraction = 0.25
         self.show_indices = False
 
