@@ -36,6 +36,7 @@ E | Toggle emoji ASCII display
 `n` L | (Re)Download media of message `n` (force)
 `n` m | Open downloaded file of message `n` with `xdg-open`
 `n` o | Open link(s) in message `n`. Use TAB to select between multiple links
+P | (Un)Pin the currently selected chat
 UP/DOWN | Scroll up/down in the history of the currently selected dialog
 / | enter search mode
 n/N | Previous/Next search result

@@ -17,6 +17,9 @@ import subprocess
 import pyperclip
 from key_handler import KeyHandler
 
+from telethon.tl.functions.messages import ToggleDialogPinRequest
+
+
 import logging
 logging.basicConfig(filename='/tmp/tttc.log') #, level=logging.DEBUG)
 
@@ -63,18 +66,50 @@ class MainView():
         self.search_box = ""
         self.vimline_box = ""
         self.command_box = ""
-        self.dialogs = []
+
+        self._dialogs = []
+        self._dialogs_updated = False
+        self.num_pinned = 0
 
         # index corresponds to the index in self.dialogs
         self.selected_chat = 0
         # index offset
         self.selected_chat_offset = 0
             
-        self.selected_message = None
-
         self.modestack = ["normal"]
 
         self.key_handler = KeyHandler(self)
+
+        self.forward_messages = []
+
+    @property
+    def dialogs(self):
+        if not self._dialogs_updated:
+            return self._dialogs
+        self._update_dialogs()
+        return self._dialogs
+
+    def _update_dialogs(self):
+        # remove updated flag
+        self._dialogs_updated = False
+        # store old selected chat and restore it after sorting
+        selected_chat = self._dialogs[self.selected_chat]
+        # remove archived chats -- they're archived for a reason
+        self._dialogs = [ dialog for dialog in self._dialogs if not dialog["dialog"].archived ]
+        # sort pinned to top: inverse(lexicographic(is pinned, date))
+        self._dialogs.sort(key = lambda x: (x["dialog"].pinned, x["dialog"].date))
+        self._dialogs = self._dialogs[::-1]
+        self.num_pinned = sum( 1 for dialog in self._dialogs if dialog["dialog"].pinned )
+        # restore selected chat
+        for idx, dialog in enumerate(self._dialogs):
+            if dialog == selected_chat:
+                self.selected_chat = idx
+                break
+
+    @dialogs.setter
+    def dialogs(self, newdialogs):
+        self._dialogs_updated = True
+        self._dialogs = newdialogs
 
     @property
     def mode(self):
@@ -111,26 +146,40 @@ class MainView():
                 if dialog["dialog"].entity.id == user_id:
                     dialog["online"] = event.online
 
+    async def on_forward(self, n):
+        dialog = self.dialogs[self.selected_chat]
+        newmessages = await self.client.get_messages(dialog["dialog"], n)
+        for message in newmessages[::-1]:
+            dialog["messages"].insert(0, message)
+        dialog["dialog"].date = message.date
+
+    async def toggle_pin(self):
+        dialog = self.dialogs[self.selected_chat]["dialog"]
+        dialog.pinned = not dialog.pinned
+        out = await self.client(ToggleDialogPinRequest(dialog.input_entity, dialog.pinned))
+        self._update_dialogs()
+        newpos = 0
+        for i in range(len(self.dialogs)):
+            if self.dialogs[i]["dialog"] == dialog:
+                newpos = i
+                break
+        self.select_chat(newpos)
+
     async def on_message(self, event):
-        # move chats with news up
         for idx, dialog in enumerate(self.dialogs):
             if dialog["dialog"].id == event.chat_id:
-                # stuff to do upon arriving messages
-                newmessage = await self.client.get_messages(dialog["dialog"], 1)
-                dialog["messages"].insert(0, newmessage[0])
+                newmessage = (await self.client.get_messages(dialog["dialog"], 1))[0]
+                # add new message to list of messages
+                dialog["messages"].insert(0, newmessage)
+                # update date of dialog to sort it up
+                dialog["dialog"].date = newmessage.date
+                # send notification, update unread count
                 if not event.out:
                     dialog["unread_count"] += 1
                     os.system(f"notify-send -i apps/telegram \"{dialog['dialog'].name}\" \"{newmessage[0].message}\"")
-                front = self.dialogs.pop(idx)
-                self.dialogs = [front] + self.dialogs
                 break
-        # dont switch the dialoge upon arriving messages
-        if idx == self.selected_chat:
-            self.selected_chat = 0
-        elif idx > self.selected_chat:
-            self.selected_chat += 1
-        elif idx < self.selected_chat:
-            pass
+        # restore order
+        self._update_dialogs()
         await self.drawtool.redraw()
 
     async def run(self):
@@ -150,6 +199,8 @@ class MainView():
                     "messages": []
                 #    "last_seen": dialog.entity.status.to_dict()["was_online"] if online == False  else None,
                 } for dialog in chats ]
+        self._update_dialogs()
+        self.selected_chat = 0
         await self.drawtool.redraw()
         self.ready = True
 
@@ -252,6 +303,7 @@ class MainView():
         await self.mark_read()
         self.center_selected_chat()
         self.inputs = ""
+        self.inputs_cursor = 0
 
     async def mark_read(self):
         chat = self.dialogs[self.selected_chat]
@@ -382,8 +434,11 @@ class MainView():
                 self.inputs += "\n"
                 self.inputs_cursor += 1
             elif len(key) == 1:
-                self.inputs += key
+                input_string = list(self.inputs)
+                input_string.insert(self.inputs_cursor, key)
+                self.inputs = "".join(input_string)
                 self.inputs_cursor += 1
+                #self.inputs.insert(self.inputs_cursor, key)
 
     def insert_move_left(self):
         self.inputs_cursor = max(0, self.inputs_cursor - 1)
